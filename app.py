@@ -3,14 +3,24 @@ from werkzeug.utils import secure_filename
 import os
 import xlrd
 import tempfile
-from pathlib import Path
+import logging
+import glob
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
 # Configuration
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max file size
-app.config["UPLOAD_FOLDER"] = tempfile.gettempdir()
+app.config["UPLOAD_FOLDER"] = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "temp"
+)
 ALLOWED_EXTENSIONS = {"xls"}
+
+# Ensure temp directory exists
+os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 
 def allowed_file(filename):
@@ -29,7 +39,6 @@ def search_excel(file_path, search_text):
                     if search_text.lower() in cell_value.lower():
                         results.append(
                             {
-                                "file": os.path.basename(file_path),
                                 "sheet": sheet.name,
                                 "row": row_idx + 1,
                                 "column": col_idx + 1,
@@ -38,52 +47,28 @@ def search_excel(file_path, search_text):
                         )
         return results
     except Exception as e:
-        return {"error": f"Error in file {os.path.basename(file_path)}: {str(e)}"}
-
-
-def search_folder(folder_path, search_text):
-    all_results = []
-    errors = []
-
-    try:
-        # Convert folder path to absolute path
-        folder_path = os.path.abspath(folder_path)
-
-        # Scan for all .xls files in the folder
-        for file_path in Path(folder_path).rglob("*.xls"):
-            try:
-                results = search_excel(str(file_path), search_text)
-                if isinstance(results, list):
-                    all_results.extend(results)
-                elif isinstance(results, dict) and "error" in results:
-                    errors.append(results["error"])
-            except Exception as e:
-                errors.append(f"Error processing {file_path.name}: {str(e)}")
-
-        return {
-            "results": all_results,
-            "errors": errors if errors else None,
-            "total_files": len(list(Path(folder_path).rglob("*.xls"))),
-        }
-    except Exception as e:
-        return {"error": f"Error accessing folder: {str(e)}"}
+        logger.error(f"Error processing Excel file: {str(e)}")
+        return {"error": str(e)}
 
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    try:
+        return render_template("index.html")
+    except Exception as e:
+        logger.error(f"Error rendering template: {str(e)}")
+        return f"Error: {str(e)}", 500
 
 
 @app.route("/search", methods=["POST"])
 def search():
-    search_text = request.form.get("search_text", "")
-    search_type = request.form.get("search_type", "file")  # 'file' or 'folder'
-
-    if search_type == "file":
+    try:
         if "file" not in request.files:
             return jsonify({"error": "No file provided"}), 400
 
         file = request.files["file"]
+        search_text = request.form.get("search_text", "")
+
         if file.filename == "":
             return jsonify({"error": "No file selected"}), 400
 
@@ -93,46 +78,94 @@ def search():
                 400,
             )
 
+        filename = secure_filename(file.filename)
+        temp_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+
+        file.save(temp_path)
+        logger.debug(f"File saved to: {temp_path}")
+
+        results = search_excel(temp_path, search_text)
+
+        # Clean up temporary file
         try:
-            filename = secure_filename(file.filename)
-            temp_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            file.save(temp_path)
-
-            results = search_excel(temp_path, search_text)
-
-            # Clean up temporary file
             os.remove(temp_path)
-
-            return jsonify(
-                {
-                    "results": results if isinstance(results, list) else [],
-                    "errors": (
-                        [results["error"]]
-                        if isinstance(results, dict) and "error" in results
-                        else None
-                    ),
-                    "total_files": 1,
-                }
-            )
+            logger.debug(f"Temporary file removed: {temp_path}")
         except Exception as e:
-            return jsonify({"error": str(e)}), 500
-
-    elif search_type == "folder":
-        folder_path = request.form.get("folder_path", "")
-        if not folder_path:
-            return jsonify({"error": "No folder path provided"}), 400
-
-        if not os.path.isdir(folder_path):
-            return jsonify({"error": "Invalid folder path"}), 400
-
-        results = search_folder(folder_path, search_text)
-        if "error" in results:
-            return jsonify({"error": results["error"]}), 500
+            logger.warning(f"Error removing temporary file: {str(e)}")
 
         return jsonify(results)
+    except Exception as e:
+        logger.error(f"Error in search endpoint: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
-    return jsonify({"error": "Invalid search type"}), 400
+
+@app.route("/search_folder", methods=["POST"])
+def search_folder():
+    try:
+        data = request.get_json()
+        if not data or "folder_path" not in data or "search_text" not in data:
+            return jsonify({"error": "Missing folder path or search text"}), 400
+
+        folder_path = os.path.expanduser(data["folder_path"])
+        search_text = data["search_text"]
+
+        if not os.path.exists(folder_path):
+            return jsonify({"error": "Folder path does not exist"}), 400
+
+        if not os.path.isdir(folder_path):
+            return jsonify({"error": "Path is not a directory"}), 400
+
+        # Find all .xls files in the folder
+        xls_files = glob.glob(os.path.join(folder_path, "*.xls"))
+
+        if not xls_files:
+            return (
+                jsonify({"error": "No .xls files found in the specified folder"}),
+                400,
+            )
+
+        all_results = []
+        for file_path in xls_files:
+            try:
+                results = search_excel(file_path, search_text)
+                if isinstance(results, list):  # Only add if search was successful
+                    for result in results:
+                        result["filename"] = os.path.basename(file_path)
+                        all_results.append(result)
+            except Exception as e:
+                logger.error(f"Error processing file {file_path}: {str(e)}")
+                continue
+
+        return jsonify(all_results)
+    except Exception as e:
+        logger.error(f"Error in search_folder endpoint: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    try:
+        # Ensure the application can find its templates and static files
+        template_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "templates"
+        )
+        static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+
+        if not os.path.exists(template_dir):
+            raise RuntimeError(f"Template directory not found: {template_dir}")
+        if not os.path.exists(static_dir):
+            raise RuntimeError(f"Static directory not found: {static_dir}")
+
+        logger.info(f"Template directory: {template_dir}")
+        logger.info(f"Static directory: {static_dir}")
+
+        # Start the server
+        print("\nStarting server on http://127.0.0.1:8080")
+        print("You can also try: http://localhost:8080")
+        print("Press Ctrl+C to quit\n")
+        app.run(debug=True, port=8080, host="0.0.0.0")
+    except Exception as e:
+        logger.error(f"Error starting server: {str(e)}")
+        print(f"Error: {str(e)}")
