@@ -55,12 +55,21 @@
 
             <div id="folderInput" class="file-input hidden">
               <label for="folderPath">Enter Folder Path</label>
-              <input
-                type="text"
-                id="folderPath"
-                name="folderPath"
-                placeholder="/path/to/folder"
-              />
+              <div class="folder-input-group">
+                <input
+                  type="text"
+                  id="folderPath"
+                  name="folderPath"
+                  placeholder="/path/to/folder"
+                />
+                <button
+                  type="button"
+                  id="selectFolderBtn"
+                  onclick="selectFolder()"
+                >
+                  Browse...
+                </button>
+              </div>
               <p class="help-text">
                 Enter the full path to the folder containing .xls files
               </p>
@@ -241,6 +250,30 @@
           });
           resultsTable.classList.remove("hidden");
           noResults.classList.add("hidden");
+        }
+      }
+
+      // Add this function for folder selection
+      async function selectFolder() {
+        try {
+          const response = await fetch("http://localhost:3000/select-folder", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          const data = await response.json();
+          if (data.path) {
+            document.getElementById("folderPath").value = data.path;
+          }
+        } catch (error) {
+          console.error("Error selecting folder:", error);
+          // Show error in the UI
+          const errorDiv = document.getElementById("error");
+          errorDiv.textContent =
+            "Failed to open folder selection dialog. Make sure the folder service is running.";
+          errorDiv.classList.remove("hidden");
         }
       }
     </script>
