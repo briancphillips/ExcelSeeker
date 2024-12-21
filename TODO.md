@@ -41,6 +41,7 @@ excel_seeker/
 ✅ Virtual environment recommended
 ✅ Package management via pip
 ✅ Development tools setup
+✅ Cross-platform installation scripts
 
 ## Required Python Packages
 
@@ -48,7 +49,7 @@ excel_seeker/
 
 - flask
 - flask-upload
-- werkzeug
+- werkzeug==2.0.3
 - xlrd
 - python-dotenv
 - xlwt
@@ -170,3 +171,14 @@ excel_seeker/
 6. [ ] Add user authentication
 7. [ ] Implement cloud storage integration
 8. [ ] Add support for more file formats
+
+## Installation Scripts
+
+✅ **Cross-Platform Installation**
+
+- ✅ Windows installer (install.bat)
+- ✅ macOS/Linux installer (install.sh)
+- ✅ Automatic virtual environment setup
+- ✅ Package dependency management
+- ✅ Directory structure creation
+- ✅ Basic application setup
