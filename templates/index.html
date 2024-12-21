@@ -88,6 +88,10 @@
           <div class="spinner"></div>
           <p>Searching...</p>
           <p id="progress" class="progress-text"></p>
+          <div class="progress-bar-container hidden">
+            <div class="progress-bar"></div>
+            <div class="progress-text">0%</div>
+          </div>
         </div>
 
         <div id="results" class="results-section">
@@ -149,6 +153,81 @@
         });
       });
 
+      async function handleFolderSearch(folderPath, searchText) {
+        const loading = document.getElementById("loading");
+        const progress = document.getElementById("progress");
+        const progressBar = loading.querySelector(".progress-bar");
+        const progressBarContainer = loading.querySelector(
+          ".progress-bar-container"
+        );
+        const progressText = loading.querySelector(".progress-text");
+        let eventSource = null;
+
+        // Show loading and progress bar
+        loading.classList.remove("hidden");
+        progressBarContainer.classList.remove("hidden");
+
+        try {
+          // Clean up any existing connection
+          if (eventSource) {
+            eventSource.close();
+          }
+
+          const url = new URL("/search_folder", window.location.origin);
+          url.searchParams.append("folder_path", folderPath);
+          url.searchParams.append("search_text", searchText);
+
+          eventSource = new EventSource(url.toString());
+
+          eventSource.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+
+              if (data.type === "progress") {
+                const percent = Math.round((data.processed / data.total) * 100);
+                progressBar.style.width = `${percent}%`;
+                progressText.textContent = `${percent}%`;
+                progress.textContent = `Processing: ${data.current_file} (${data.processed}/${data.total} files, ${data.found_results} results found)`;
+              } else if (data.type === "complete") {
+                eventSource.close();
+                displayResults(data.results);
+                loading.classList.add("hidden");
+                progressBarContainer.classList.add("hidden");
+              }
+            } catch (error) {
+              console.error("Error parsing SSE data:", error);
+              throw new Error("Error processing folder data");
+            }
+          };
+
+          eventSource.onerror = (error) => {
+            console.error("SSE Error:", error);
+            eventSource.close();
+            throw new Error("Error processing folder: Connection failed");
+          };
+
+          // Add cleanup on page unload
+          window.addEventListener("beforeunload", () => {
+            if (eventSource) {
+              eventSource.close();
+            }
+          });
+        } catch (error) {
+          console.error("Error:", error);
+          const errorDiv = document.getElementById("error");
+          errorDiv.textContent = error.message || "Failed to process folder";
+          errorDiv.classList.remove("hidden");
+          loading.classList.add("hidden");
+          progressBarContainer.classList.add("hidden");
+
+          // Clean up connection on error
+          if (eventSource) {
+            eventSource.close();
+          }
+        }
+      }
+
+      // Update the form submit handler
       document
         .getElementById("searchForm")
         .addEventListener("submit", async (e) => {
@@ -173,24 +252,7 @@
           try {
             if (searchType === "folder") {
               const folderPath = formData.get("folderPath");
-              const response = await fetch("/search_folder", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  folder_path: folderPath,
-                  search_text: formData.get("search_text"),
-                }),
-              });
-
-              const data = await response.json();
-
-              if (!response.ok) {
-                throw new Error(data.error || "An error occurred");
-              }
-
-              displayResults(data);
+              await handleFolderSearch(folderPath, formData.get("search_text"));
             } else {
               const response = await fetch("/search", {
                 method: "POST",
@@ -221,8 +283,10 @@
             error.textContent = err.message;
             error.classList.remove("hidden");
           } finally {
-            loading.classList.add("hidden");
-            progress.textContent = "";
+            if (searchType !== "folder") {
+              loading.classList.add("hidden");
+              progress.textContent = "";
+            }
           }
         });
 

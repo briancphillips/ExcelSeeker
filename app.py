@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response
 from werkzeug.utils import secure_filename
 import os
 import xlrd
 import tempfile
 import logging
 import glob
+import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -18,6 +20,7 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "temp"
 )
 ALLOWED_EXTENSIONS = {"xls"}
+MAX_WORKERS = 4  # Number of parallel file processing threads
 
 # Ensure temp directory exists
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -102,15 +105,35 @@ def search():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/search_folder", methods=["POST"])
+def find_excel_files(folder_path):
+    """Recursively find all Excel files in the folder and its subdirectories."""
+    xls_files = []
+    try:
+        for root, _, files in os.walk(folder_path):
+            for file in files:
+                if file.lower().endswith(".xls"):
+                    xls_files.append(os.path.join(root, file))
+    except Exception as e:
+        logger.error(f"Error scanning directory {folder_path}: {str(e)}")
+    return xls_files
+
+
+@app.route("/search_folder", methods=["GET", "POST"])
 def search_folder():
     try:
-        data = request.get_json()
-        if not data or "folder_path" not in data or "search_text" not in data:
+        # Handle both GET and POST requests
+        if request.method == "GET":
+            folder_path = request.args.get("folder_path")
+            search_text = request.args.get("search_text")
+        else:
+            data = request.get_json()
+            folder_path = data.get("folder_path")
+            search_text = data.get("search_text")
+
+        if not folder_path or not search_text:
             return jsonify({"error": "Missing folder path or search text"}), 400
 
-        folder_path = os.path.expanduser(data["folder_path"])
-        search_text = data["search_text"]
+        folder_path = os.path.expanduser(folder_path)
 
         if not os.path.exists(folder_path):
             return jsonify({"error": "Folder path does not exist"}), 400
@@ -118,28 +141,80 @@ def search_folder():
         if not os.path.isdir(folder_path):
             return jsonify({"error": "Path is not a directory"}), 400
 
-        # Find all .xls files in the folder
-        xls_files = glob.glob(os.path.join(folder_path, "*.xls"))
+        # Find all .xls files recursively
+        xls_files = find_excel_files(folder_path)
 
         if not xls_files:
             return (
-                jsonify({"error": "No .xls files found in the specified folder"}),
+                jsonify(
+                    {
+                        "error": "No .xls files found in the specified folder or its subdirectories"
+                    }
+                ),
                 400,
             )
 
-        all_results = []
-        for file_path in xls_files:
-            try:
-                results = search_excel(file_path, search_text)
-                if isinstance(results, list):  # Only add if search was successful
-                    for result in results:
-                        result["filename"] = os.path.basename(file_path)
-                        all_results.append(result)
-            except Exception as e:
-                logger.error(f"Error processing file {file_path}: {str(e)}")
-                continue
+        def generate():
+            total_files = len(xls_files)
+            processed_files = 0
+            all_results = []
 
-        return jsonify(all_results)
+            def process_file(file_path):
+                try:
+                    results = search_excel(file_path, search_text)
+                    if isinstance(results, list):
+                        for result in results:
+                            # Use relative path from the selected folder
+                            rel_path = os.path.relpath(file_path, folder_path)
+                            result["filename"] = rel_path
+                        return results
+                    return []
+                except Exception as e:
+                    logger.error(f"Error processing file {file_path}: {str(e)}")
+                    return []
+
+            # Process files in parallel using ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                future_to_file = {
+                    executor.submit(process_file, file_path): file_path
+                    for file_path in xls_files
+                }
+
+                for future in as_completed(future_to_file):
+                    file_path = future_to_file[future]
+                    try:
+                        results = future.result()
+                        all_results.extend(results)
+                        processed_files += 1
+
+                        # Send progress update
+                        progress = {
+                            "type": "progress",
+                            "processed": processed_files,
+                            "total": total_files,
+                            "current_file": os.path.relpath(file_path, folder_path),
+                            "found_results": len(all_results),
+                        }
+                        yield f"data: {json.dumps(progress)}\n\n"
+
+                    except Exception as e:
+                        logger.error(f"Error processing file {file_path}: {str(e)}")
+                        processed_files += 1
+
+            # Send final results
+            final_data = {"type": "complete", "results": all_results}
+            yield f"data: {json.dumps(final_data)}\n\n"
+
+        # Set CORS headers for SSE
+        headers = {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+        }
+
+        return Response(generate(), mimetype="text/event-stream", headers=headers)
+
     except Exception as e:
         logger.error(f"Error in search_folder endpoint: {str(e)}")
         return jsonify({"error": str(e)}), 500
