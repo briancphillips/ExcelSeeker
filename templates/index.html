@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ExcelSeeker</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>ExcelSeeker</h1>
+        <p>Search through Excel files with ease</p>
+      </header>
+
+      <main>
+        <div class="search-options">
+          <div class="search-type-selector">
+            <label>Search Type:</label>
+            <div class="radio-group">
+              <input
+                type="radio"
+                id="fileSearch"
+                name="searchType"
+                value="file"
+                checked
+              />
+              <label for="fileSearch">Single File</label>
+              <input
+                type="radio"
+                id="folderSearch"
+                name="searchType"
+                value="folder"
+              />
+              <label for="folderSearch">Folder</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="upload-section">
+          <form id="searchForm" enctype="multipart/form-data">
+            <div id="fileInput" class="file-input">
+              <label for="file">Choose Excel File (.xls)</label>
+              <input type="file" id="file" name="file" accept=".xls" />
+            </div>
+
+            <div id="folderInput" class="folder-input hidden">
+              <label for="folder">Excel Files Folder Path</label>
+              <input
+                type="text"
+                id="folder"
+                name="folder_path"
+                placeholder="/path/to/folder"
+              />
+            </div>
+
+            <div class="search-input">
+              <label for="search_text">Search Text</label>
+              <input type="text" id="search_text" name="search_text" required />
+            </div>
+
+            <button type="submit">Search</button>
+          </form>
+        </div>
+
+        <div id="loading" class="loading hidden">
+          <div class="spinner"></div>
+          <p>Searching...</p>
+        </div>
+
+        <div id="results" class="results-section">
+          <div id="searchStats" class="search-stats hidden">
+            <p>
+              Found <span id="resultCount">0</span> results in
+              <span id="fileCount">0</span> files
+            </p>
+          </div>
+
+          <table class="results-table hidden">
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Sheet</th>
+                <th>Row</th>
+                <th>Column</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+
+          <div id="noResults" class="no-results hidden">
+            <p>No results found</p>
+          </div>
+
+          <div id="errors" class="errors hidden"></div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      // Handle search type toggle
+      document.querySelectorAll('input[name="searchType"]').forEach((radio) => {
+        radio.addEventListener("change", (e) => {
+          const fileInput = document.getElementById("fileInput");
+          const folderInput = document.getElementById("folderInput");
+          const file = document.getElementById("file");
+          const folder = document.getElementById("folder");
+
+          if (e.target.value === "file") {
+            fileInput.classList.remove("hidden");
+            folderInput.classList.add("hidden");
+            file.required = true;
+            folder.required = false;
+          } else {
+            fileInput.classList.add("hidden");
+            folderInput.classList.remove("hidden");
+            file.required = false;
+            folder.required = true;
+          }
+        });
+      });
+
+      // Handle form submission
+      document
+        .getElementById("searchForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const form = e.target;
+          const formData = new FormData(form);
+          const searchType = document.querySelector(
+            'input[name="searchType"]:checked'
+          ).value;
+          formData.append("search_type", searchType);
+
+          const loading = document.getElementById("loading");
+          const resultsTable = document.querySelector(".results-table");
+          const resultsBody = document.getElementById("resultsBody");
+          const noResults = document.getElementById("noResults");
+          const errors = document.getElementById("errors");
+          const searchStats = document.getElementById("searchStats");
+          const resultCount = document.getElementById("resultCount");
+          const fileCount = document.getElementById("fileCount");
+
+          // Reset and show loading
+          loading.classList.remove("hidden");
+          resultsTable.classList.add("hidden");
+          noResults.classList.add("hidden");
+          errors.classList.add("hidden");
+          searchStats.classList.add("hidden");
+
+          try {
+            const response = await fetch("/search", {
+              method: "POST",
+              body: formData,
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || "An error occurred");
+            }
+
+            if (data.error) {
+              throw new Error(data.error);
+            }
+
+            // Display results
+            resultsBody.innerHTML = "";
+
+            if (!data.results || data.results.length === 0) {
+              noResults.classList.remove("hidden");
+            } else {
+              data.results.forEach((result) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                <td>${result.file}</td>
+                <td>${result.sheet}</td>
+                <td>${result.row}</td>
+                <td>${result.column}</td>
+                <td>${result.value}</td>
+              `;
+                resultsBody.appendChild(row);
+              });
+              resultsTable.classList.remove("hidden");
+
+              // Update stats
+              resultCount.textContent = data.results.length;
+              fileCount.textContent = data.total_files;
+              searchStats.classList.remove("hidden");
+            }
+
+            // Display errors if any
+            if (data.errors && data.errors.length > 0) {
+              errors.innerHTML =
+                "<h3>Errors:</h3><ul>" +
+                data.errors.map((error) => `<li>${error}</li>`).join("") +
+                "</ul>";
+              errors.classList.remove("hidden");
+            }
+          } catch (err) {
+            errors.innerHTML = `<p class="error-message">${err.message}</p>`;
+            errors.classList.remove("hidden");
+          } finally {
+            loading.classList.add("hidden");
+          }
+        });
+    </script>
+  </body>
+</html>
