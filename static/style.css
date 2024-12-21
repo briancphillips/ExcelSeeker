@@ -2,31 +2,31 @@
 :root[data-theme="light"] {
   --bg-color: #f5f5f5;
   --text-color: #333;
-  --header-color: #2c3e50;
-  --subtext-color: #7f8c8d;
-  --card-bg: white;
-  --border-color: #e0e0e0;
+  --header-color: #222;
+  --subtext-color: #666;
+  --border-color: #ddd;
+  --card-bg: #fff;
+  --button-bg: #4a90e2;
+  --button-hover: #357abd;
   --hover-bg: #f8f9fa;
-  --button-bg: #3498db;
-  --button-hover: #2980b9;
-  --error-bg: #fdf0ed;
-  --error-color: #e74c3c;
-  --spinner-color: #3498db;
+  --error-color: #dc3545;
+  --error-bg: #f8d7da;
+  --spinner-color: #4a90e2;
 }
 
 :root[data-theme="dark"] {
   --bg-color: #1a1a1a;
   --text-color: #e0e0e0;
-  --header-color: #ffffff;
-  --subtext-color: #a0a0a0;
+  --header-color: #fff;
+  --subtext-color: #aaa;
+  --border-color: #444;
   --card-bg: #2d2d2d;
-  --border-color: #404040;
+  --button-bg: #4a90e2;
+  --button-hover: #357abd;
   --hover-bg: #363636;
-  --button-bg: #2980b9;
-  --button-hover: #3498db;
-  --error-bg: #442424;
   --error-color: #ff6b6b;
-  --spinner-color: #3498db;
+  --error-bg: #451c1c;
+  --spinner-color: #4a90e2;
 }
 
 /* Reset and base styles */
@@ -38,10 +38,10 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, sans-serif;
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
   line-height: 1.6;
-  color: var(--text-color);
   background-color: var(--bg-color);
+  color: var(--text-color);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -52,7 +52,7 @@ body {
   right: 20px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.5rem;
   z-index: 1000;
 }
 
@@ -92,7 +92,7 @@ body {
 }
 
 input:checked + .slider {
-  background-color: var(--button-bg);
+  background-color: #2196f3;
 }
 
 input:checked + .slider:before {
@@ -109,7 +109,7 @@ input:checked + .slider:before {
 
 .theme-label {
   color: var(--text-color);
-  font-weight: 500;
+  font-size: 0.9rem;
 }
 
 /* Container styles */
@@ -326,4 +326,30 @@ button:hover {
     top: 10px;
     right: 10px;
   }
+}
+
+/* Add these styles for folder selection */
+.folder-input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.folder-input-group input[type="text"] {
+  flex: 1;
+}
+
+#selectFolderBtn {
+  padding: 0.8rem 1rem;
+  white-space: nowrap;
+  background-color: var(--button-bg);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#selectFolderBtn:hover {
+  background-color: var(--button-hover);
 }

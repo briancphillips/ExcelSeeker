@@ -11,6 +11,7 @@ ExcelSeeker is a web-based application that allows users to search through Excel
 ✅ Real-time search results display
 ✅ Clean and responsive user interface
 ✅ Cross-platform compatibility (Windows, macOS, Linux)
+✅ Native folder selection dialog
 
 ## Technical Stack Implementation
 
@@ -18,6 +19,7 @@ ExcelSeeker is a web-based application that allows users to search through Excel
 ✅ **Frontend**: HTML, CSS, JavaScript (vanilla)
 ✅ **File Processing**: xlrd library for Excel file handling
 ✅ **Development Environment**: Python virtual environment
+✅ **Folder Selection**: Node.js + Electron service
 
 ## Project Structure
 
@@ -31,6 +33,9 @@ excel_seeker/
 ├── static/            # Static assets
 │   └── style.css     # Styling
 ├── temp/              # Temporary file storage
+├── folder_service/    # Native folder selection service
+│   ├── server.js     # Electron-based folder dialog
+│   └── package.json  # Node.js dependencies
 ├── requirements.txt   # Python dependencies
 └── README.md         # Project documentation
 ```
@@ -89,6 +94,7 @@ excel_seeker/
    - [ ] Regular expression support
    - [ ] Column-specific search
    - [x] Multiple file search (via folder selection)
+   - [x] Native folder selection dialog
 
 2. **User Experience**
 
@@ -96,6 +102,7 @@ excel_seeker/
    - [ ] Search history
    - [ ] Export results
    - [x] Dark mode
+   - [x] Native OS folder dialog
 
 3. **File Support**
 
