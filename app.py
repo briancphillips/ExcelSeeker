@@ -7,6 +7,11 @@ import logging
 import glob
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import subprocess
+import requests
+import time
+import signal
+import atexit
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -30,28 +35,56 @@ def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def search_excel(file_path, search_text):
-    results = []
+def format_cell_address(row, col):
+    """Convert row and column numbers to Excel cell reference."""
+    col_str = ""
+    while col:
+        col, remainder = divmod(col - 1, 26)
+        col_str = chr(65 + remainder) + col_str
+    return f"{col_str}{row}"
+
+
+def process_excel_file(file_path, search_text):
     try:
         workbook = xlrd.open_workbook(file_path)
-        for sheet_idx in range(workbook.nsheets):
-            sheet = workbook.sheet_by_index(sheet_idx)
+        results = []
+
+        for sheet_index in range(workbook.nsheets):
+            sheet = workbook.sheet_by_index(sheet_index)
             for row_idx in range(sheet.nrows):
                 for col_idx in range(sheet.ncols):
                     cell_value = str(sheet.cell_value(row_idx, col_idx))
                     if search_text.lower() in cell_value.lower():
                         results.append(
                             {
+                                "filename": os.path.basename(file_path),
                                 "sheet": sheet.name,
-                                "row": row_idx + 1,
-                                "column": col_idx + 1,
+                                "cell": xlrd.colname(col_idx) + str(row_idx + 1),
                                 "value": cell_value,
                             }
                         )
         return results
+    except xlrd.XLRDError as e:
+        # Handle specific Excel file errors
+        error_msg = str(e)
+        if "Unsupported format" in error_msg:
+            app.logger.error(f"File format not supported: {file_path}")
+            return {
+                "error": "This Excel file format is not supported. Please ensure it is a valid .xls file."
+            }
+        elif "Password protected" in error_msg:
+            app.logger.error(f"Password protected file: {file_path}")
+            return {
+                "error": "This Excel file is password protected and cannot be read."
+            }
+        else:
+            app.logger.error(f"Error processing file {file_path}: {e}")
+            return {
+                "error": "Unable to read this Excel file. Please ensure it is not corrupted."
+            }
     except Exception as e:
-        logger.error(f"Error processing Excel file: {str(e)}")
-        return {"error": str(e)}
+        app.logger.error(f"Unexpected error processing file {file_path}: {e}")
+        return {"error": "An unexpected error occurred while reading this file."}
 
 
 @app.route("/")
@@ -65,43 +98,60 @@ def index():
 
 @app.route("/search", methods=["POST"])
 def search():
+    """Handle search request and return results."""
+    if "file" not in request.files and "folder_path" not in request.form:
+        return jsonify({"error": "No file or folder path provided"}), 400
+
+    search_text = request.form.get("search_text", "").strip()
+    if not search_text:
+        return jsonify({"error": "No search text provided"}), 400
+
+    results = []
+    total_files = 0
+    processed_files = 0
+
     try:
-        if "file" not in request.files:
-            return jsonify({"error": "No file provided"}), 400
+        if "folder_path" in request.form:
+            folder_path = request.form["folder_path"]
+            if not os.path.isdir(folder_path):
+                return jsonify({"error": "Invalid folder path"}), 400
 
-        file = request.files["file"]
-        search_text = request.form.get("search_text", "")
+            excel_files = []
+            for root, _, files in os.walk(folder_path):
+                excel_files.extend(
+                    [os.path.join(root, f) for f in files if f.endswith(".xls")]
+                )
 
-        if file.filename == "":
-            return jsonify({"error": "No file selected"}), 400
+            total_files = len(excel_files)
 
-        if not allowed_file(file.filename):
-            return (
-                jsonify({"error": "Invalid file type. Only .xls files are allowed"}),
-                400,
+            for file_path in excel_files:
+                file_results = process_excel_file(file_path, search_text)
+                results.extend(file_results)
+                processed_files += 1
+
+                # Send progress update
+                progress = int((processed_files / total_files) * 100)
+                sse.publish(
+                    {"progress": progress, "file": os.path.basename(file_path)},
+                    type="progress",
+                )
+
+        else:
+            file = request.files["file"]
+            if not file or not file.filename.endswith(".xls"):
+                return jsonify({"error": "Invalid file type"}), 400
+
+            temp_path = os.path.join(
+                app.config["UPLOAD_FOLDER"], secure_filename(file.filename)
             )
+            file.save(temp_path)
 
-        filename = secure_filename(file.filename)
-        temp_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-
-        # Ensure the directory exists
-        os.makedirs(os.path.dirname(temp_path), exist_ok=True)
-
-        file.save(temp_path)
-        logger.debug(f"File saved to: {temp_path}")
-
-        results = search_excel(temp_path, search_text)
-
-        # Clean up temporary file
-        try:
-            os.remove(temp_path)
-            logger.debug(f"Temporary file removed: {temp_path}")
-        except Exception as e:
-            logger.warning(f"Error removing temporary file: {str(e)}")
+            results = process_excel_file(temp_path, search_text)
+            os.remove(temp_path)  # Clean up temporary file
 
         return jsonify(results)
+
     except Exception as e:
-        logger.error(f"Error in search endpoint: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -161,7 +211,7 @@ def search_folder():
 
             def process_file(file_path):
                 try:
-                    results = search_excel(file_path, search_text)
+                    results = process_excel_file(file_path, search_text)
                     if isinstance(results, list):
                         for result in results:
                             # Use relative path from the selected folder
@@ -220,6 +270,51 @@ def search_folder():
         return jsonify({"error": str(e)}), 500
 
 
+def is_folder_service_running():
+    try:
+        response = requests.get("http://localhost:3000/health", timeout=1)
+        return response.status_code == 200
+    except:
+        return False
+
+
+def start_folder_service():
+    try:
+        # Start the folder selection service
+        process = subprocess.Popen(
+            ["npm", "start"],
+            cwd="folder_service",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+
+        # Wait for service to start (max 10 seconds)
+        start_time = time.time()
+        while time.time() - start_time < 10:
+            if is_folder_service_running():
+                logger.info("Folder selection service started successfully")
+                return process
+            time.sleep(0.5)
+
+        # If we get here, service didn't start
+        process.terminate()
+        raise Exception("Folder selection service failed to start")
+    except Exception as e:
+        logger.error(f"Error starting folder service: {str(e)}")
+        return None
+
+
+def cleanup_services(folder_service_process):
+    if folder_service_process:
+        logger.info("Shutting down folder selection service...")
+        folder_service_process.terminate()
+        try:
+            folder_service_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            folder_service_process.kill()
+
+
 if __name__ == "__main__":
     try:
         # Ensure the application can find its templates and static files
@@ -236,6 +331,21 @@ if __name__ == "__main__":
         logger.info(f"Template directory: {template_dir}")
         logger.info(f"Static directory: {static_dir}")
 
+        # Start folder selection service if not running
+        folder_service_process = None
+        if not is_folder_service_running():
+            logger.info("Starting folder selection service...")
+            folder_service_process = start_folder_service()
+            if not folder_service_process:
+                logger.warning(
+                    "Failed to start folder selection service. Folder selection will not be available."
+                )
+        else:
+            logger.info("Folder selection service is already running")
+
+        # Register cleanup function
+        atexit.register(cleanup_services, folder_service_process)
+
         # Start the server
         print("\nStarting server on http://127.0.0.1:8080")
         print("You can also try: http://localhost:8080")
@@ -244,3 +354,5 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Error starting server: {str(e)}")
         print(f"Error: {str(e)}")
+        if folder_service_process:
+            cleanup_services(folder_service_process)

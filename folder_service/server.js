@@ -51,6 +51,10 @@ app.on("activate", () => {
   }
 });
 
+server.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
 server.post("/select-folder", async (req, res) => {
   try {
     if (!mainWindow) {

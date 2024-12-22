@@ -12,6 +12,8 @@
   --error-color: #dc3545;
   --error-bg: #f8d7da;
   --spinner-color: #4a90e2;
+  --error-text: #9b1c1c;
+  --error-border: #f8b4b4;
 }
 
 :root[data-theme="dark"] {
@@ -27,6 +29,8 @@
   --error-color: #ff6b6b;
   --error-bg: #451c1c;
   --spinner-color: #4a90e2;
+  --error-text: #f8b4b4;
+  --error-border: #9b1c1c;
 }
 
 /* Reset and base styles */
@@ -498,4 +502,112 @@ button:hover {
 
 .custom-file-label:hover .browse-btn {
   background-color: var(--button-hover);
+}
+
+/* Results controls */
+.results-controls {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: var(--hover-bg);
+  border-radius: 8px;
+}
+
+.filter-group {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.filter-input {
+  flex: 1;
+  padding: 0.8rem;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  transition: border-color 0.3s ease;
+}
+
+.filter-input:focus {
+  border-color: var(--button-bg);
+  outline: none;
+}
+
+.filter-select {
+  padding: 0.8rem;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+
+.filter-select:focus {
+  border-color: var(--button-bg);
+  outline: none;
+}
+
+/* Sortable table headers */
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-right: 1.5rem !important;
+}
+
+.sort-icon {
+  position: absolute;
+  right: 0.5rem;
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+.sortable:hover .sort-icon {
+  opacity: 1;
+}
+
+/* Table container with horizontal scroll */
+.table-container {
+  overflow-x: auto;
+  margin: 0 -1rem;
+  padding: 0 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .filter-group {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .filter-input,
+  .filter-select {
+    width: 100%;
+  }
+}
+
+.error {
+  background-color: var(--error-bg);
+  color: var(--error-text);
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 0.5rem;
+  text-align: center;
+  animation: slideIn 0.3s ease-out;
+  position: relative;
+  border: 1px solid var(--error-border);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }

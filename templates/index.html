@@ -125,23 +125,48 @@
           </div>
         </div>
 
-        <div id="results" class="results-section">
-          <table class="results-table hidden">
-            <thead>
-              <tr>
-                <th>File</th>
-                <th>Sheet</th>
-                <th>Row</th>
-                <th>Column</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody id="resultsBody"></tbody>
-          </table>
-          <div id="noResults" class="no-results hidden">
-            <p>No results found</p>
+        <div class="results-section hidden" id="resultsSection">
+          <div class="results-controls">
+            <div class="filter-group">
+              <input
+                type="text"
+                id="filterInput"
+                placeholder="Filter results..."
+                class="filter-input"
+              />
+              <select id="filterColumn" class="filter-select">
+                <option value="all">All Columns</option>
+                <option value="filename">Filename</option>
+                <option value="sheet">Sheet</option>
+                <option value="cell">Cell</option>
+                <option value="value">Value</option>
+              </select>
+            </div>
           </div>
-          <div id="error" class="error hidden"></div>
+          <div class="table-container">
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th data-sort="filename" class="sortable">
+                    Filename <span class="sort-icon">↕</span>
+                  </th>
+                  <th data-sort="sheet" class="sortable">
+                    Sheet <span class="sort-icon">↕</span>
+                  </th>
+                  <th data-sort="cell" class="sortable">
+                    Cell <span class="sort-icon">↕</span>
+                  </th>
+                  <th data-sort="value" class="sortable">
+                    Value <span class="sort-icon">↕</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody">
+                <!-- Results will be populated here -->
+              </tbody>
+            </table>
+          </div>
+          <div class="no-results hidden">No results found.</div>
         </div>
       </main>
     </div>
@@ -187,16 +212,23 @@
       async function handleFolderSearch(folderPath, searchText) {
         const loading = document.getElementById("loading");
         const progress = document.getElementById("progress");
-        const progressBar = loading.querySelector(".progress-bar");
-        const progressBarContainer = loading.querySelector(
+        const progressBar = document.querySelector(".progress-bar");
+        const progressBarContainer = document.querySelector(
           ".progress-bar-container"
         );
-        const progressText = loading.querySelector(".progress-text");
+        const progressText = document.querySelector(
+          ".progress-bar-container .progress-text"
+        );
+        const resultsSection = document.getElementById("resultsSection");
         let eventSource = null;
 
         // Show loading and progress bar
         loading.classList.remove("hidden");
         progressBarContainer.classList.remove("hidden");
+        resultsSection.classList.add("hidden");
+        progress.textContent = "Preparing to search...";
+        progressBar.style.width = "0%";
+        progressText.textContent = "0%";
 
         try {
           // Clean up any existing connection
@@ -221,20 +253,37 @@
                 progress.textContent = `Processing: ${data.current_file} (${data.processed}/${data.total} files, ${data.found_results} results found)`;
               } else if (data.type === "complete") {
                 eventSource.close();
-                displayResults(data.results);
                 loading.classList.add("hidden");
                 progressBarContainer.classList.add("hidden");
+
+                if (data.results && data.results.length > 0) {
+                  displayResults(data.results);
+                } else {
+                  showError("No results found in the processed files.");
+                }
+              } else if (data.type === "error") {
+                eventSource.close();
+                loading.classList.add("hidden");
+                progressBarContainer.classList.add("hidden");
+                showError(
+                  data.message || "An error occurred while processing files."
+                );
               }
             } catch (error) {
               console.error("Error parsing SSE data:", error);
-              throw new Error("Error processing folder data");
+              eventSource.close();
+              loading.classList.add("hidden");
+              progressBarContainer.classList.add("hidden");
+              showError("Error processing folder data");
             }
           };
 
           eventSource.onerror = (error) => {
             console.error("SSE Error:", error);
             eventSource.close();
-            throw new Error("Error processing folder: Connection failed");
+            loading.classList.add("hidden");
+            progressBarContainer.classList.add("hidden");
+            showError("Error processing folder: Connection failed");
           };
 
           // Add cleanup on page unload
@@ -245,17 +294,27 @@
           });
         } catch (error) {
           console.error("Error:", error);
-          const errorDiv = document.getElementById("error");
-          errorDiv.textContent = error.message || "Failed to process folder";
-          errorDiv.classList.remove("hidden");
           loading.classList.add("hidden");
           progressBarContainer.classList.add("hidden");
-
-          // Clean up connection on error
-          if (eventSource) {
-            eventSource.close();
-          }
+          showError(
+            error.message || "An error occurred while processing the folder"
+          );
         }
+      }
+
+      // Add error display function
+      function showError(message) {
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "error";
+        errorDiv.textContent = message;
+
+        const resultsSection = document.getElementById("resultsSection");
+        resultsSection.insertAdjacentElement("beforebegin", errorDiv);
+
+        // Remove error after 5 seconds
+        setTimeout(() => {
+          errorDiv.remove();
+        }, 5000);
       }
 
       // Update the form submit handler
@@ -268,23 +327,32 @@
           const formData = new FormData(form);
           const loading = document.getElementById("loading");
           const progress = document.getElementById("progress");
-          const resultsTable = document.querySelector(".results-table");
-          const resultsBody = document.getElementById("resultsBody");
-          const noResults = document.getElementById("noResults");
-          const error = document.getElementById("error");
+          const resultsSection = document.getElementById("resultsSection");
           const searchType = formData.get("searchType");
+
+          // Remove any existing error messages
+          document
+            .querySelectorAll(".error")
+            .forEach((error) => error.remove());
 
           // Reset and show loading
           loading.classList.remove("hidden");
-          resultsTable.classList.add("hidden");
-          noResults.classList.add("hidden");
-          error.classList.add("hidden");
+          resultsSection.classList.add("hidden");
+          progress.textContent = "";
 
           try {
             if (searchType === "folder") {
               const folderPath = formData.get("folderPath");
+              if (!folderPath) {
+                throw new Error("Please select a folder");
+              }
               await handleFolderSearch(folderPath, formData.get("search_text"));
             } else {
+              const file = formData.get("file");
+              if (!file || !file.name) {
+                throw new Error("Please select a file");
+              }
+
               const response = await fetch("/search", {
                 method: "POST",
                 body: formData,
@@ -300,52 +368,69 @@
                 throw new Error(data.error);
               }
 
-              const filename = formData.get("file").name;
-              const results = Array.isArray(data)
-                ? data.map((result) => ({
-                    ...result,
-                    filename,
-                  }))
-                : [];
-
-              displayResults(results);
+              loading.classList.add("hidden");
+              if (data && data.length > 0) {
+                displayResults(data);
+              } else {
+                showError("No results found in the selected file.");
+              }
             }
           } catch (err) {
-            error.textContent = err.message;
-            error.classList.remove("hidden");
-          } finally {
-            if (searchType !== "folder") {
-              loading.classList.add("hidden");
-              progress.textContent = "";
-            }
+            loading.classList.add("hidden");
+            showError(
+              err.message || "An error occurred while processing the request"
+            );
           }
         });
 
+      // Update displayResults function
       function displayResults(results) {
-        const resultsTable = document.querySelector(".results-table");
-        const resultsBody = document.getElementById("resultsBody");
-        const noResults = document.getElementById("noResults");
+        const resultsSection = document.getElementById("resultsSection");
+        const tbody = document.getElementById("resultsBody");
+        const noResults = document.querySelector(".no-results");
+        const loading = document.getElementById("loading");
+        const progressBarContainer = document.querySelector(
+          ".progress-bar-container"
+        );
 
-        resultsBody.innerHTML = "";
+        // Hide loading and progress
+        loading.classList.add("hidden");
+        progressBarContainer.classList.add("hidden");
 
-        if (results.length === 0) {
+        // Show results section
+        resultsSection.classList.remove("hidden");
+
+        // Clear previous results
+        tbody.innerHTML = "";
+
+        if (!results || results.length === 0) {
           noResults.classList.remove("hidden");
-          resultsTable.classList.add("hidden");
-        } else {
-          results.forEach((result) => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                        <td>${result.filename}</td>
-                        <td>${result.sheet}</td>
-                        <td>${result.row}</td>
-                        <td>${result.column}</td>
-                        <td>${result.value}</td>
-                    `;
-            resultsBody.appendChild(row);
-          });
-          resultsTable.classList.remove("hidden");
-          noResults.classList.add("hidden");
+          return;
         }
+
+        noResults.classList.add("hidden");
+        results.forEach((result) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${escapeHtml(result.filename)}</td>
+            <td>${escapeHtml(result.sheet)}</td>
+            <td>${escapeHtml(result.cell)}</td>
+            <td>${escapeHtml(result.value)}</td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        // Store results for sorting/filtering
+        window.searchResults = results;
+      }
+
+      function escapeHtml(unsafe) {
+        return unsafe
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
       }
 
       // Add this function for folder selection
@@ -376,6 +461,157 @@
       document.getElementById("file").addEventListener("change", function (e) {
         const fileName = e.target.files[0]?.name || "No file chosen";
         document.getElementById("fileNameDisplay").textContent = fileName;
+      });
+
+      // Add debounce function
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+
+      // Update the filtering functionality
+      document.addEventListener("DOMContentLoaded", function () {
+        let currentSort = { column: null, direction: "asc" };
+        const MIN_FILTER_LENGTH = 2; // Minimum characters before filtering
+        let cachedResults = []; // Cache for filtered results
+
+        // Sorting functionality
+        document.querySelectorAll(".sortable").forEach((header) => {
+          header.addEventListener("click", () => {
+            const column = header.dataset.sort;
+
+            // Update sort direction
+            if (currentSort.column === column) {
+              currentSort.direction =
+                currentSort.direction === "asc" ? "desc" : "asc";
+            } else {
+              currentSort.column = column;
+              currentSort.direction = "asc";
+            }
+
+            // Update sort icons
+            document.querySelectorAll(".sort-icon").forEach((icon) => {
+              icon.textContent = "↕";
+            });
+            header.querySelector(".sort-icon").textContent =
+              currentSort.direction === "asc" ? "↑" : "↓";
+
+            // Sort and display results
+            if (window.searchResults) {
+              applyFiltersAndSort();
+            }
+          });
+        });
+
+        // Filtering functionality
+        const filterInput = document.getElementById("filterInput");
+        const filterColumn = document.getElementById("filterColumn");
+        const resultsSection = document.getElementById("resultsSection");
+        const tbody = document.getElementById("resultsBody");
+        const noResults = document.querySelector(".no-results");
+
+        function applyFiltersAndSort() {
+          if (!window.searchResults) return;
+
+          const filterText = filterInput.value.toLowerCase();
+          const column = filterColumn.value;
+
+          // Skip filtering if text is too short
+          if (filterText.length > 0 && filterText.length < MIN_FILTER_LENGTH) {
+            return;
+          }
+
+          // Start with all results if no filter, or use cached results
+          let filteredResults =
+            filterText.length >= MIN_FILTER_LENGTH
+              ? cachedResults
+              : [...window.searchResults];
+
+          // Apply filter
+          if (filterText.length >= MIN_FILTER_LENGTH) {
+            filteredResults = window.searchResults.filter((result) => {
+              if (column === "all") {
+                // Optimize by checking length first and using early return
+                return Object.values(result).some((value) => {
+                  const strValue = String(value).toLowerCase();
+                  return strValue.includes(filterText);
+                });
+              }
+              return String(result[column]).toLowerCase().includes(filterText);
+            });
+            cachedResults = filteredResults; // Cache the filtered results
+          }
+
+          // Apply sort if needed
+          if (currentSort.column) {
+            filteredResults.sort((a, b) => {
+              let valueA = String(a[currentSort.column]).toLowerCase();
+              let valueB = String(b[currentSort.column]).toLowerCase();
+              return currentSort.direction === "asc"
+                ? valueA.localeCompare(valueB)
+                : valueB.localeCompare(valueA);
+            });
+          }
+
+          // Update UI
+          updateResultsTable(filteredResults);
+        }
+
+        function updateResultsTable(results) {
+          tbody.innerHTML = "";
+
+          if (results.length === 0) {
+            noResults.classList.remove("hidden");
+            return;
+          }
+
+          noResults.classList.add("hidden");
+          const fragment = document.createDocumentFragment();
+
+          results.forEach((result) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${escapeHtml(result.filename)}</td>
+              <td>${escapeHtml(result.sheet)}</td>
+              <td>${escapeHtml(result.cell)}</td>
+              <td>${escapeHtml(result.value)}</td>
+            `;
+            fragment.appendChild(row);
+          });
+
+          tbody.appendChild(fragment);
+        }
+
+        // Debounce the filter function
+        const debouncedFilter = debounce(() => {
+          applyFiltersAndSort();
+        }, 300); // 300ms delay
+
+        filterInput.addEventListener("input", () => {
+          const filterText = filterInput.value.toLowerCase();
+
+          // Clear results if filter text is too short
+          if (filterText.length > 0 && filterText.length < MIN_FILTER_LENGTH) {
+            tbody.innerHTML = "";
+            noResults.classList.remove("hidden");
+            noResults.textContent = `Please enter at least ${MIN_FILTER_LENGTH} characters to search`;
+            return;
+          }
+
+          debouncedFilter();
+        });
+
+        filterColumn.addEventListener("change", () => {
+          cachedResults = []; // Clear cache when column changes
+          applyFiltersAndSort();
+        });
       });
     </script>
   </body>
