@@ -11,11 +11,64 @@
   </head>
   <body>
     <div class="theme-switch">
-      <label class="switch">
-        <input type="checkbox" id="themeToggle" />
-        <span class="slider round"></span>
-      </label>
-      <span class="theme-label">Dark Mode</span>
+      <button
+        id="restartButton"
+        class="theme-toggle-btn"
+        aria-label="Restart services"
+        title="Restart services and reload page"
+      >
+        <svg
+          class="theme-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M23 4v6h-6"></path>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+      </button>
+      <button
+        id="themeToggle"
+        class="theme-toggle-btn"
+        aria-label="Toggle theme"
+      >
+        <svg
+          class="theme-icon sun-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg
+          class="theme-icon moon-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
     </div>
 
     <div class="container">
@@ -149,6 +202,55 @@
         <div class="results-section" id="resultsSection">
           <div class="results-header">
             <h2>Search Results</h2>
+          </div>
+          <div class="results-controls">
+            <div class="filter-group">
+              <input
+                type="text"
+                id="filterInput"
+                class="filter-input"
+                placeholder="Filter results..."
+                onkeyup="filterResults()"
+              />
+              <select
+                id="filterColumn"
+                class="filter-select"
+                onchange="filterResults()"
+              >
+                <option value="all">All Columns</option>
+                <option value="filename">File Name</option>
+                <option value="sheet">Sheet</option>
+                <option value="cell">Cell</option>
+                <option value="value">Value</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th class="sortable" onclick="sortTable(0)">
+                    File <span class="sort-icon">↕</span>
+                  </th>
+                  <th class="sortable" onclick="sortTable(1)">
+                    Sheet <span class="sort-icon">↕</span>
+                  </th>
+                  <th class="sortable" onclick="sortTable(2)">
+                    Cell <span class="sort-icon">↕</span>
+                  </th>
+                  <th class="sortable" onclick="sortTable(3)">
+                    Value <span class="sort-icon">↕</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="skippedFiles" class="skipped-files hidden">
+          <div class="skipped-header">
+            <h3>Skipped Files</h3>
             <button
               type="button"
               onclick="clearSkipList()"
@@ -158,33 +260,9 @@
               Clear Skip List
             </button>
           </div>
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>File</th>
-                  <th>Sheet</th>
-                  <th>Cell</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-              <tbody id="resultsBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div id="skippedFiles" class="skipped-files hidden">
-          <h3>Skipped Files</h3>
           <div class="skipped-files-content">
             <ul id="skippedFilesList"></ul>
           </div>
-          <button
-            type="button"
-            onclick="clearSkipList()"
-            class="secondary-button"
-          >
-            Clear Skip List
-          </button>
         </div>
       </main>
     </div>
@@ -197,13 +275,27 @@
       // Check for saved theme preference
       const savedTheme = localStorage.getItem("theme") || "light";
       html.setAttribute("data-theme", savedTheme);
-      themeToggle.checked = savedTheme === "dark";
+      updateThemeIcon(savedTheme === "dark");
 
-      themeToggle.addEventListener("change", () => {
-        const newTheme = themeToggle.checked ? "dark" : "light";
+      themeToggle.addEventListener("click", () => {
+        const currentTheme = html.getAttribute("data-theme");
+        const newTheme = currentTheme === "light" ? "dark" : "light";
         html.setAttribute("data-theme", newTheme);
         localStorage.setItem("theme", newTheme);
+        updateThemeIcon(newTheme === "dark");
       });
+
+      function updateThemeIcon(isDark) {
+        const sunIcon = themeToggle.querySelector(".sun-icon");
+        const moonIcon = themeToggle.querySelector(".moon-icon");
+        if (isDark) {
+          sunIcon.style.display = "none";
+          moonIcon.style.display = "block";
+        } else {
+          sunIcon.style.display = "block";
+          moonIcon.style.display = "none";
+        }
+      }
 
       // Toggle between file and folder input
       document.querySelectorAll('input[name="searchType"]').forEach((radio) => {
@@ -249,27 +341,21 @@
         progressText.textContent = "0%";
         cancelButton.style.display = "block";
 
-        try {
-          // Clean up any existing connection
-          if (activeEventSource) {
-            activeEventSource.close();
-            activeEventSource = null;
-          }
+        // Get the selected search mode
+        const searchMode = document.querySelector(
+          'input[name="search_mode"]:checked'
+        ).value;
 
-          const url = new URL("/search_folder", window.location.origin);
-          url.searchParams.append("folder_path", folderPath);
-          url.searchParams.append("search_text", searchText);
+        // Create EventSource for progress updates
+        const eventSource = new EventSource(
+          `/search_folder?folder_path=${encodeURIComponent(
+            folderPath
+          )}&search_text=${encodeURIComponent(
+            searchText
+          )}&search_mode=${searchMode}`
+        );
 
-          const eventSource = new EventSource(url.toString());
-          handleEventSource(eventSource);
-        } catch (error) {
-          console.error("Error:", error);
-          loading.classList.add("hidden");
-          progressBarContainer.classList.add("hidden");
-          showError(
-            error.message || "An error occurred while processing the folder"
-          );
-        }
+        handleEventSource(eventSource);
       }
 
       // Add error display function
@@ -370,20 +456,26 @@
       // Update displayResults function
       function displayResults(results) {
         const tbody = document.getElementById("resultsBody");
-        const noResults = document.getElementById("noResults");
+        const resultsSection = document.getElementById("resultsSection");
+
+        // Clear existing content
         tbody.innerHTML = "";
 
         if (!results || results.length === 0) {
-          noResults.classList.remove("hidden");
+          resultsSection.classList.add("hidden");
+          showMessage("No results found.");
           return;
         }
 
-        noResults.classList.add("hidden");
+        // Show the results section
+        resultsSection.classList.remove("hidden");
+
+        // Add each result to the table
         results.forEach((result) => {
           const row = document.createElement("tr");
           row.innerHTML = `
             <td>
-              <a href="file://${escapeHtml(result.filepath)}" 
+              <a href="#" 
                  onclick="openFile('${escapeHtml(
                    result.filepath
                  )}'); return false;" 
@@ -710,69 +802,72 @@
         const cancelButton = document.getElementById("cancelSearch");
         const progressText = document.getElementById("progress");
         const progressBar = document.querySelector(".progress-bar");
-        const progressBarText = document.querySelector(".progress-text");
+        const progressBarText = document.querySelector(
+          ".progress-bar-container .progress-text"
+        );
+        const resultsSection = document.getElementById("resultsSection");
 
         loadingDiv.classList.remove("hidden");
         cancelButton.style.display = "block";
 
         eventSource.onmessage = function (event) {
-          try {
-            const data = JSON.parse(event.data);
-            console.log("SSE message received:", data);
+          const data = JSON.parse(event.data);
+          console.log("Received data:", data); // Debug log
 
-            if (data.search_id) {
-              currentSearchId = data.search_id;
-              console.log("Search ID set:", currentSearchId);
-              return; // Don't process further for search_id message
-            }
+          if (data.error) {
+            eventSource.close();
+            loadingDiv.classList.add("hidden");
+            showError(data.error);
+            return;
+          }
 
-            if (data.type === "progress") {
-              // Update progress bar
-              const progress = (data.processed / data.total) * 100;
-              progressBar.style.width = `${progress}%`;
-              progressBarText.textContent = `${Math.round(progress)}%`;
+          if (data.search_id) {
+            currentSearchId = data.search_id;
+            return;
+          }
 
-              // Update progress text
-              let progressMsg = `Processing: ${data.current_file} (${data.processed}/${data.total} files`;
-              if (typeof data.results_found === "number") {
-                progressMsg += `, ${data.results_found} results found`;
-              }
-              if (data.skipped_files > 0) {
-                progressMsg += `, ${data.skipped_files} files skipped`;
-              }
-              progressMsg += ")";
-              progressText.textContent = progressMsg;
-            } else if (data.type === "complete") {
-              console.log("Search completed");
+          if (data.type === "progress") {
+            const percentage = Math.round((data.processed / data.total) * 100);
+            // Update main progress text
+            progressText.textContent = `${percentage}%`;
+            // Update progress bar and its text
+            progressBar.style.width = `${percentage}%`;
+            progressBarText.textContent = `${percentage}%`;
+            // Update the file details
+            document.querySelector(
+              "#loading p:nth-child(3)"
+            ).textContent = `Processing: ${data.current_file} (${data.processed}/${data.total} files, ${data.results_found} results found)`;
+          } else if (data.type === "complete") {
+            console.log("Search complete:", data); // Debug log
+            eventSource.close();
+            loadingDiv.classList.add("hidden");
+
+            // Display results if any
+            if (data.results && data.results.length > 0) {
               displayResults(data.results);
-
-              if (data.skipped_files && data.skipped_files.length > 0) {
-                displaySkippedFiles(data.skipped_files);
-              }
-
-              progressText.textContent = `Completed: ${data.total_processed} files processed, ${data.total_results} results found, ${data.total_skipped} files skipped`;
-              cleanupSearch();
-            } else if (data.type === "cancelled") {
-              console.log("Search cancelled");
-              progressText.textContent = "Search cancelled";
-              showMessage("Search cancelled by user");
-              document.getElementById("resultsBody").innerHTML = "";
-              cleanupSearch();
-            } else if (data.error) {
-              console.error("Search error:", data.error);
-              showError(data.error);
-              cleanupSearch();
+              resultsSection.classList.remove("hidden");
+            } else {
+              showMessage("No results found.");
             }
-          } catch (error) {
-            console.error("Error processing SSE message:", error);
-            showError("Error processing search results");
+
+            // Display skipped files if any
+            if (data.skipped_files && data.skipped_files.length > 0) {
+              displaySkippedFiles(data.skipped_files);
+            }
+          } else if (data.type === "cancelled") {
+            console.log("Search cancelled"); // Debug log
+            eventSource.close();
+            loadingDiv.classList.add("hidden");
+            showMessage("Search cancelled.");
             cleanupSearch();
           }
         };
 
-        eventSource.onerror = function (error) {
-          console.error("SSE error:", error);
-          showError("Error receiving search progress updates");
+        eventSource.onerror = function (event) {
+          console.error("EventSource error:", event); // Debug log
+          eventSource.close();
+          loadingDiv.classList.add("hidden");
+          showError("Connection error occurred. Please try again.");
           cleanupSearch();
         };
       }
@@ -836,19 +931,27 @@
       function displaySkippedFiles(skippedFiles) {
         const skippedFilesDiv = document.getElementById("skippedFiles");
         const skippedFilesList = document.getElementById("skippedFilesList");
+
+        // Clear existing content
         skippedFilesList.innerHTML = "";
 
-        skippedFiles.forEach((file) => {
-          const li = document.createElement("li");
-          li.className = "skipped-file-item";
-          li.innerHTML = `
-            <span class="file-name">${escapeHtml(file.file)}</span>
-            <span class="file-reason">${escapeHtml(file.reason)}</span>
-          `;
-          skippedFilesList.appendChild(li);
-        });
+        if (skippedFiles && skippedFiles.length > 0) {
+          skippedFiles.forEach((file) => {
+            const li = document.createElement("li");
+            li.className = "skipped-file-item";
+            li.innerHTML = `
+              <span class="file-name">${escapeHtml(file.file)}</span>
+              <span class="file-reason">${escapeHtml(file.reason)}</span>
+            `;
+            skippedFilesList.appendChild(li);
+          });
 
-        skippedFilesDiv.classList.remove("hidden");
+          // Show the skipped files section
+          skippedFilesDiv.classList.remove("hidden");
+        } else {
+          // Hide the section if no skipped files
+          skippedFilesDiv.classList.add("hidden");
+        }
       }
 
       async function clearSkipList() {
@@ -867,6 +970,99 @@
         } catch (error) {
           showError("Failed to clear skip list");
           console.error("Error clearing skip list:", error);
+        }
+      }
+
+      // Add restart functionality
+      document
+        .getElementById("restartButton")
+        .addEventListener("click", async () => {
+          try {
+            // Disable the restart button
+            const restartButton = document.getElementById("restartButton");
+            restartButton.disabled = true;
+
+            // Show a loading message
+            showMessage("Stopping services...");
+
+            // Clean up any existing search
+            if (activeEventSource) {
+              activeEventSource.close();
+              activeEventSource = null;
+            }
+
+            // Call the restart endpoint
+            const response = await fetch("/restart-services", {
+              method: "POST",
+            });
+
+            if (!response.ok) {
+              throw new Error("Failed to restart services");
+            }
+
+            showMessage("Starting services...");
+
+            // Reload the page after a delay
+            setTimeout(() => {
+              window.location.reload();
+            }, 3000);
+          } catch (error) {
+            showError("Failed to restart services: " + error.message);
+            // Re-enable the restart button on error
+            document.getElementById("restartButton").disabled = false;
+          }
+        });
+
+      // Add sorting functionality
+      let sortDirection = 1;
+      let lastSortedColumn = -1;
+
+      function sortTable(columnIndex) {
+        const tbody = document.getElementById("resultsBody");
+        const rows = Array.from(tbody.getElementsByTagName("tr"));
+
+        // Toggle sort direction if clicking the same column
+        if (lastSortedColumn === columnIndex) {
+          sortDirection *= -1;
+        } else {
+          sortDirection = 1;
+        }
+        lastSortedColumn = columnIndex;
+
+        rows.sort((a, b) => {
+          const aValue = a.cells[columnIndex].textContent.trim().toLowerCase();
+          const bValue = b.cells[columnIndex].textContent.trim().toLowerCase();
+          return aValue.localeCompare(bValue) * sortDirection;
+        });
+
+        // Clear and re-append sorted rows
+        tbody.innerHTML = "";
+        rows.forEach((row) => tbody.appendChild(row));
+      }
+
+      // Add filtering functionality
+      function filterResults() {
+        const filterText = document
+          .getElementById("filterInput")
+          .value.toLowerCase();
+        const filterColumn = document.getElementById("filterColumn").value;
+        const tbody = document.getElementById("resultsBody");
+        const rows = tbody.getElementsByTagName("tr");
+
+        for (let row of rows) {
+          let text = "";
+          if (filterColumn === "all") {
+            text = row.textContent.toLowerCase();
+          } else {
+            const columnIndex = {
+              filename: 0,
+              sheet: 1,
+              cell: 2,
+              value: 3,
+            }[filterColumn];
+            text = row.cells[columnIndex].textContent.toLowerCase();
+          }
+          row.style.display = text.includes(filterText) ? "" : "none";
         }
       }
     </script>

@@ -33,6 +33,9 @@ ALLOWED_EXTENSIONS = {"xls"}
 MAX_WORKERS = 4  # Number of parallel file processing threads
 SKIP_LIST_FILE = "skip_list.json"
 
+# Global variables
+folder_service_process = None
+
 # Track active searches
 active_searches = {}
 search_events = defaultdict(Event)
@@ -246,12 +249,13 @@ def find_excel_files(folder_path):
 
 @app.route("/search_folder")
 def search_folder():
-    search_text = request.args.get("search_text")
+    """Handle folder search request."""
     folder_path = request.args.get("folder_path")
+    search_text = request.args.get("search_text")
     search_mode = request.args.get("search_mode", "exact")
 
-    if not search_text or not folder_path:
-        return jsonify({"error": "Missing required parameters"}), 400
+    if not folder_path or not search_text:
+        return jsonify({"error": "Missing folder path or search text"}), 400
 
     def generate():
         search_id = str(uuid.uuid4())
@@ -269,74 +273,97 @@ def search_folder():
                 return
 
             # Get all XLS files
-            xls_files = [
-                f
-                for f in glob.glob(
-                    os.path.join(folder_path, "**/*.xls"), recursive=True
-                )
-            ]
+            xls_files = find_excel_files(folder_path)
             if not xls_files:
                 yield f"data: {json.dumps({'error': 'No .xls files found in folder'})}\n\n"
                 return
 
-            # Load skip list and filter out skipped files
+            # Load skip list and prepare skipped files info
             skip_list = load_skip_list()
+            skipped_files = []
+
+            # Check for previously skipped files in this folder
+            for file_path in xls_files:
+                abs_path = str(os.path.abspath(file_path))
+                if abs_path in skip_list:
+                    skipped_files.append(
+                        {
+                            "file": os.path.basename(file_path),
+                            "reason": skip_list[abs_path],
+                        }
+                    )
+
+            # Filter out skipped files from processing list
             xls_files = [
                 f for f in xls_files if str(os.path.abspath(f)) not in skip_list
             ]
             total_files = len(xls_files)
             processed = 0
-            skipped_files = []
 
-            for file_path in xls_files:
-                # Check for cancellation
-                if cancel_event.is_set():
-                    logger.info(f"Search {search_id} cancelled")
-                    yield f"data: {json.dumps({'type': 'cancelled'})}\n\n"
-                    return
-
-                processed += 1
-                try:
-                    result = process_excel_file(file_path, search_text, search_mode)
-                    if "results" in result:
-                        all_results.extend(result["results"])
-                        total_results += result["count"]
-                    elif result.get("skipped"):
-                        error_msg = result.get("error", "Unknown error")
-                        skipped_files.append(
-                            {
-                                "file": os.path.basename(file_path),
-                                "reason": error_msg,
-                            }
-                        )
-                        # Add to persistent skip list
-                        add_to_skip_list(file_path, error_msg)
-                except Exception as e:
-                    error_msg = str(e)
-                    logger.error(f"Error processing {file_path}: {error_msg}")
-                    skipped_files.append(
-                        {"file": os.path.basename(file_path), "reason": error_msg}
-                    )
-                    # Add to persistent skip list
-                    add_to_skip_list(file_path, error_msg)
-                    continue
-
-                # Send progress update
+            # If there are previously skipped files, send initial skipped files update
+            if skipped_files:
                 progress_data = {
                     "type": "progress",
-                    "current_file": os.path.basename(file_path),
-                    "processed": processed,
+                    "current_file": "Starting search...",
+                    "processed": 0,
                     "total": total_files,
                     "skipped_files": len(skipped_files),
-                    "results_found": total_results,
+                    "results_found": 0,
                 }
                 yield f"data: {json.dumps(progress_data)}\n\n"
 
-                # Check for cancellation again after progress update
-                if cancel_event.is_set():
-                    logger.info(f"Search {search_id} cancelled after progress update")
-                    yield f"data: {json.dumps({'type': 'cancelled'})}\n\n"
-                    return
+            with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                for file_path in xls_files:
+                    # Check for cancellation
+                    if cancel_event.is_set():
+                        logger.info(f"Search {search_id} cancelled")
+                        yield f"data: {json.dumps({'type': 'cancelled'})}\n\n"
+                        return
+
+                    processed += 1
+                    try:
+                        result = process_excel_file(file_path, search_text, search_mode)
+                        if "results" in result:
+                            all_results.extend(result["results"])
+                            total_results += result["count"]
+                        elif result.get("skipped"):
+                            error_msg = result.get("error", "Unknown error")
+                            skipped_files.append(
+                                {
+                                    "file": os.path.basename(file_path),
+                                    "reason": error_msg,
+                                }
+                            )
+                            # Add to persistent skip list
+                            add_to_skip_list(file_path, error_msg)
+                    except Exception as e:
+                        error_msg = str(e)
+                        logger.error(f"Error processing {file_path}: {error_msg}")
+                        skipped_files.append(
+                            {"file": os.path.basename(file_path), "reason": error_msg}
+                        )
+                        # Add to persistent skip list
+                        add_to_skip_list(file_path, error_msg)
+                        continue
+
+                    # Send progress update
+                    progress_data = {
+                        "type": "progress",
+                        "current_file": os.path.basename(file_path),
+                        "processed": processed,
+                        "total": total_files,
+                        "skipped_files": len(skipped_files),
+                        "results_found": total_results,
+                    }
+                    yield f"data: {json.dumps(progress_data)}\n\n"
+
+                    # Check for cancellation again after progress update
+                    if cancel_event.is_set():
+                        logger.info(
+                            f"Search {search_id} cancelled after progress update"
+                        )
+                        yield f"data: {json.dumps({'type': 'cancelled'})}\n\n"
+                        return
 
             # Send completion data
             completion_data = {
@@ -347,6 +374,9 @@ def search_folder():
                 "skipped_files": skipped_files,
                 "total_results": total_results,
             }
+            logger.info(
+                f"Search completed. Sending completion data: {completion_data}"
+            )  # Debug log
             yield f"data: {json.dumps(completion_data)}\n\n"
 
         except Exception as e:
@@ -404,13 +434,47 @@ def start_folder_service():
 
 
 def cleanup_services(folder_service_process):
+    """Clean up services and ensure ports are released."""
     if folder_service_process:
-        logger.info("Shutting down folder selection service...")
-        folder_service_process.terminate()
         try:
-            folder_service_process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            folder_service_process.kill()
+            logger.info("Shutting down folder selection service...")
+            # Kill the process group to ensure all child processes are terminated
+            if platform.system().lower() == "windows":
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(folder_service_process.pid)]
+                )
+            else:
+                os.killpg(os.getpgid(folder_service_process.pid), signal.SIGTERM)
+
+            # Wait for the process to fully terminate
+            try:
+                folder_service_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                logger.warning("Process didn't terminate gracefully, forcing...")
+                if platform.system().lower() == "windows":
+                    subprocess.run(
+                        [
+                            "taskkill",
+                            "/F",
+                            "/T",
+                            "/PID",
+                            str(folder_service_process.pid),
+                        ]
+                    )
+                else:
+                    os.killpg(os.getpgid(folder_service_process.pid), signal.SIGKILL)
+
+            # Additional cleanup to ensure port release
+            if platform.system().lower() == "windows":
+                subprocess.run(["netstat", "-ano", "|", "findstr", ":3000"], shell=True)
+            else:
+                subprocess.run(
+                    ["lsof", "-ti", ":3000", "|", "xargs", "kill", "-9"], shell=True
+                )
+
+            logger.info("Service cleanup completed")
+        except Exception as e:
+            logger.error(f"Error during cleanup: {str(e)}")
 
 
 @app.route("/skip-list", methods=["GET", "DELETE"])
@@ -489,6 +553,35 @@ def open_file():
             return jsonify({"error": f"Failed to open file: {str(e)}"}), 500
 
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/restart-services", methods=["POST"])
+def restart_services():
+    """Restart both the Flask app and folder service."""
+    global folder_service_process
+    try:
+        # Stop the folder service if it's running
+        if folder_service_process:
+            logger.info("Stopping existing folder service...")
+            cleanup_services(folder_service_process)
+            folder_service_process = None
+
+            # Give the system time to fully release resources
+            time.sleep(2)
+
+        # Start the folder service again
+        logger.info("Starting new folder service...")
+        new_folder_service = start_folder_service()
+        if not new_folder_service:
+            raise Exception("Failed to restart folder service")
+
+        folder_service_process = new_folder_service
+        logger.info("Services restarted successfully")
+
+        return jsonify({"message": "Services restarted successfully"})
+    except Exception as e:
+        logger.error(f"Error restarting services: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
