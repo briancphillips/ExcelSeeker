@@ -28,39 +28,64 @@
         <div class="upload-section">
           <form id="searchForm" enctype="multipart/form-data">
             <div class="search-type">
-              <label>Search Type:</label>
+              <label>How would you like to search?</label>
               <div class="radio-group">
-                <input
-                  type="radio"
-                  id="singleFile"
-                  name="searchType"
-                  value="file"
-                  checked
-                />
-                <label for="singleFile">Single File</label>
-                <input
-                  type="radio"
-                  id="folder"
-                  name="searchType"
-                  value="folder"
-                />
-                <label for="folder">Folder</label>
+                <div class="radio-option">
+                  <input
+                    type="radio"
+                    id="singleFile"
+                    name="searchType"
+                    value="file"
+                    checked
+                  />
+                  <label for="singleFile">
+                    <i class="icon">📄</i>
+                    Single File
+                  </label>
+                  <span class="check-icon">✓</span>
+                </div>
+                <div class="radio-option">
+                  <input
+                    type="radio"
+                    id="folder"
+                    name="searchType"
+                    value="folder"
+                  />
+                  <label for="folder">
+                    <i class="icon">📁</i>
+                    Folder
+                  </label>
+                  <span class="check-icon">✓</span>
+                </div>
               </div>
             </div>
 
             <div id="fileInput" class="file-input">
-              <label for="file">Choose Excel File (.xls)</label>
-              <input type="file" id="file" name="file" accept=".xls" required />
+              <label>Select Excel File</label>
+              <div class="custom-file-input">
+                <input
+                  type="file"
+                  id="file"
+                  name="file"
+                  accept=".xls"
+                  required
+                />
+                <label for="file" class="custom-file-label">
+                  <span id="fileNameDisplay">No file chosen</span>
+                  <div class="browse-btn">Browse</div>
+                </label>
+              </div>
             </div>
 
             <div id="folderInput" class="file-input hidden">
-              <label for="folderPath">Enter Folder Path</label>
+              <label for="folderPath">Select Folder</label>
               <div class="folder-input-group">
                 <input
                   type="text"
                   id="folderPath"
                   name="folderPath"
-                  placeholder="/path/to/folder"
+                  placeholder="Choose a folder containing .xls files"
+                  readonly
                 />
                 <button
                   type="button"
@@ -71,13 +96,19 @@
                 </button>
               </div>
               <p class="help-text">
-                Enter the full path to the folder containing .xls files
+                All .xls files in the selected folder will be searched
               </p>
             </div>
 
             <div class="search-input">
               <label for="search_text">Search Text</label>
-              <input type="text" id="search_text" name="search_text" required />
+              <input
+                type="text"
+                id="search_text"
+                name="search_text"
+                required
+                placeholder="Enter text to search for..."
+              />
             </div>
 
             <button type="submit">Search</button>
@@ -340,6 +371,12 @@
           errorDiv.classList.remove("hidden");
         }
       }
+
+      // Add this: Update file name display
+      document.getElementById("file").addEventListener("change", function (e) {
+        const fileName = e.target.files[0]?.name || "No file chosen";
+        document.getElementById("fileNameDisplay").textContent = fileName;
+      });
     </script>
   </body>
 </html>

@@ -1,0 +1,11 @@
+{
+  "name": "excelseeker",
+  "version": "1.0.0",
+  "description": "Excel file search application",
+  "scripts": {
+    "start": "cd folder_service && npm install && npm start",
+    "postinstall": "cd folder_service && npm install"
+  },
+  "author": "",
+  "license": "MIT"
+}

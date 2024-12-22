@@ -1,15 +1,15 @@
 {
-  "name": "excelseeker-folder-service",
+  "name": "folder-service",
   "version": "1.0.0",
   "description": "Native folder selection service for ExcelSeeker",
   "main": "server.js",
   "scripts": {
-    "start": "electron server.js"
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "electron": "^28.0.0",
-    "excelseeker-folder-service": "file:",
+    "electron": "^27.1.0",
     "express": "^4.18.2"
   }
 }
