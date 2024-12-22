@@ -146,48 +146,31 @@
           </button>
         </div>
 
-        <div class="results-section hidden" id="resultsSection">
-          <div class="results-controls">
-            <div class="filter-group">
-              <input
-                type="text"
-                id="filterInput"
-                placeholder="Filter results..."
-                class="filter-input"
-              />
-              <select id="filterColumn" class="filter-select">
-                <option value="all">All Columns</option>
-                <option value="filename">Filename</option>
-                <option value="sheet">Sheet</option>
-                <option value="cell">Cell</option>
-                <option value="value">Value</option>
-              </select>
-            </div>
+        <div class="results-section" id="resultsSection">
+          <div class="results-header">
+            <h2>Search Results</h2>
+            <button
+              type="button"
+              onclick="clearSkipList()"
+              class="secondary-button"
+              title="Clear the list of skipped files"
+            >
+              Clear Skip List
+            </button>
           </div>
           <div class="table-container">
-            <table class="results-table">
+            <table>
               <thead>
                 <tr>
-                  <th data-sort="filename" class="sortable">
-                    Filename <span class="sort-icon">↕</span>
-                  </th>
-                  <th data-sort="sheet" class="sortable">
-                    Sheet <span class="sort-icon">↕</span>
-                  </th>
-                  <th data-sort="cell" class="sortable">
-                    Cell <span class="sort-icon">↕</span>
-                  </th>
-                  <th data-sort="value" class="sortable">
-                    Value <span class="sort-icon">↕</span>
-                  </th>
+                  <th>File</th>
+                  <th>Sheet</th>
+                  <th>Cell</th>
+                  <th>Value</th>
                 </tr>
               </thead>
-              <tbody id="resultsBody">
-                <!-- Results will be populated here -->
-              </tbody>
+              <tbody id="resultsBody"></tbody>
             </table>
           </div>
-          <div class="no-results hidden">No results found.</div>
         </div>
 
         <div id="skippedFiles" class="skipped-files hidden">
@@ -386,22 +369,8 @@
 
       // Update displayResults function
       function displayResults(results) {
-        const resultsSection = document.getElementById("resultsSection");
         const tbody = document.getElementById("resultsBody");
-        const noResults = document.querySelector(".no-results");
-        const loading = document.getElementById("loading");
-        const progressBarContainer = document.querySelector(
-          ".progress-bar-container"
-        );
-
-        // Hide loading and progress
-        loading.classList.add("hidden");
-        progressBarContainer.classList.add("hidden");
-
-        // Show results section
-        resultsSection.classList.remove("hidden");
-
-        // Clear previous results
+        const noResults = document.getElementById("noResults");
         tbody.innerHTML = "";
 
         if (!results || results.length === 0) {
@@ -413,7 +382,16 @@
         results.forEach((result) => {
           const row = document.createElement("tr");
           row.innerHTML = `
-            <td>${escapeHtml(result.filename)}</td>
+            <td>
+              <a href="file://${escapeHtml(result.filepath)}" 
+                 onclick="openFile('${escapeHtml(
+                   result.filepath
+                 )}'); return false;" 
+                 class="file-link" 
+                 title="Click to open file">
+                ${escapeHtml(result.filename)}
+              </a>
+            </td>
             <td>${escapeHtml(result.sheet)}</td>
             <td>${escapeHtml(result.cell)}</td>
             <td>${escapeHtml(result.value)}</td>
@@ -423,6 +401,26 @@
 
         // Store results for sorting/filtering
         window.searchResults = results;
+      }
+
+      function openFile(filepath) {
+        fetch("/open-file", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ filepath: filepath }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.error) {
+              showError(data.error);
+            }
+          })
+          .catch((error) => {
+            console.error("Error opening file:", error);
+            showError("Failed to open file");
+          });
       }
 
       function escapeHtml(unsafe) {

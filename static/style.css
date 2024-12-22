@@ -16,6 +16,8 @@
   --error-border: #f8b4b4;
   --success-bg: #4caf50;
   --success-text: #fff;
+  --accent-hover-color: #0056b3;
+  --accent-active-color: #004085;
 }
 
 :root[data-theme="dark"] {
@@ -35,6 +37,8 @@
   --error-border: #9b1c1c;
   --success-bg: #43a047;
   --success-text: #fff;
+  --accent-hover-color: #63b3ed;
+  --accent-active-color: #4299e1;
 }
 
 /* Reset and base styles */
@@ -829,4 +833,36 @@ button:hover {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: var(--card-bg);
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.results-header h2 {
+  margin: 0;
+  color: var(--text-color);
+}
+
+.file-link {
+  color: var(--accent-color);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.file-link:hover {
+  color: var(--accent-hover-color);
+  text-decoration: underline;
+}
+
+.file-link:active {
+  color: var(--accent-active-color);
 }

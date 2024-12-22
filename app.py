@@ -16,6 +16,7 @@ from threading import Event
 from collections import defaultdict
 import uuid
 import threading
+import platform
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -139,6 +140,7 @@ def process_excel_file(file_path, search_text, search_mode="exact"):
                             results.append(
                                 {
                                     "filename": os.path.basename(file_path),
+                                    "filepath": str(os.path.abspath(file_path)),
                                     "sheet": sheet.name,
                                     "cell": format_cell_address(
                                         row_idx + 1, col_idx + 1
@@ -456,6 +458,38 @@ def cleanup_search(search_id):
             del active_searches[search_id]
     except Exception as e:
         logger.error(f"Error cleaning up search {search_id}: {e}")
+
+
+@app.route("/open-file", methods=["POST"])
+def open_file():
+    """Open a file using the system's default application."""
+    try:
+        data = request.get_json()
+        if not data or "filepath" not in data:
+            return jsonify({"error": "No file path provided"}), 400
+
+        filepath = data["filepath"]
+        if not os.path.exists(filepath):
+            return jsonify({"error": "File not found"}), 404
+
+        # Use the appropriate command based on the operating system
+        system = platform.system().lower()
+        try:
+            if system == "darwin":  # macOS
+                subprocess.run(["open", filepath])
+            elif system == "windows":
+                subprocess.run(["start", filepath], shell=True)
+            elif system == "linux":
+                subprocess.run(["xdg-open", filepath])
+            else:
+                return jsonify({"error": "Unsupported operating system"}), 400
+
+            return jsonify({"message": "File opened successfully"})
+        except subprocess.SubprocessError as e:
+            return jsonify({"error": f"Failed to open file: {str(e)}"}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
