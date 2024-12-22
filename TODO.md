@@ -107,6 +107,9 @@ excel_seeker/
    ✅ Debounced filtering
    ✅ Result caching
    ✅ Service health monitoring
+   ✅ Search cancellation
+   ✅ Progress tracking
+   ✅ Real-time updates
 
 ## Optional Enhancements (To Be Implemented)
 
@@ -119,6 +122,8 @@ excel_seeker/
    - [x] Native folder selection dialog
    - [x] Real-time progress tracking
    - [x] Optimized filtering
+   - [x] Search cancellation
+   - [x] Progress indicators
 
 2. **User Experience**
 
@@ -130,6 +135,10 @@ excel_seeker/
    - [x] Progress indicators
    - [x] Debounced search
    - [x] Automatic service management
+   - [x] Search cancellation
+   - [x] Real-time progress updates
+   - [x] Skipped files tracking
+   - [x] Clear skip list functionality
 
 3. **File Support**
 
@@ -139,6 +148,7 @@ excel_seeker/
    - [x] Large file handling
    - [x] Recursive folder search
    - [x] Corrupted file handling
+   - [x] Skip list management
 
 4. **Results Enhancement**
    - [x] Sort/filter results
@@ -147,6 +157,8 @@ excel_seeker/
    - [ ] Highlight matches
    - [x] Optimized filtering
    - [x] Result caching
+   - [x] Progress tracking
+   - [x] Skipped files display
 
 ## Testing Status
 

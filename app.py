@@ -12,6 +12,10 @@ import requests
 import time
 import signal
 import atexit
+from threading import Event
+from collections import defaultdict
+import uuid
+import threading
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -26,6 +30,11 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
 )
 ALLOWED_EXTENSIONS = {"xls"}
 MAX_WORKERS = 4  # Number of parallel file processing threads
+SKIP_LIST_FILE = "skip_list.json"
+
+# Track active searches
+active_searches = {}
+search_events = defaultdict(Event)
 
 # Ensure temp directory exists
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -44,47 +53,103 @@ def format_cell_address(row, col):
     return f"{col_str}{row}"
 
 
-def process_excel_file(file_path, search_text):
+def load_skip_list():
+    """Load the list of files to skip from JSON file."""
+    try:
+        if os.path.exists(SKIP_LIST_FILE):
+            if (
+                os.path.getsize(SKIP_LIST_FILE) > 0
+            ):  # Only try to load if file is not empty
+                try:
+                    with open(SKIP_LIST_FILE, "r") as f:
+                        return set(json.load(f))
+                except json.JSONDecodeError:
+                    logger.error("Skip list file is corrupted. Creating new one.")
+                    save_skip_list(set())  # Reset the file if corrupted
+                    return set()
+            else:
+                logger.info("Skip list file is empty")
+                return set()
+        else:
+            logger.info("Skip list file does not exist. Creating new one.")
+            save_skip_list(set())  # Create the file if it doesn't exist
+            return set()
+    except Exception as e:
+        logger.error(f"Error loading skip list: {e}")
+        return set()
+
+
+def save_skip_list(skip_list):
+    """Save the skip list to JSON file."""
+    try:
+        # Ensure the skip list is a set of strings
+        skip_list = set(str(path) for path in skip_list)
+        # Convert to list for JSON serialization
+        with open(SKIP_LIST_FILE, "w") as f:
+            json.dump(list(skip_list), f, indent=2)
+    except Exception as e:
+        logger.error(f"Error saving skip list: {e}")
+
+
+def add_to_skip_list(file_path):
+    """Add a file to the skip list."""
+    try:
+        skip_list = load_skip_list()
+        skip_list.add(str(os.path.abspath(file_path)))  # Ensure path is string
+        save_skip_list(skip_list)
+    except Exception as e:
+        logger.error(f"Error adding to skip list: {e}")
+
+
+def process_excel_file(file_path, search_text, search_mode="exact"):
+    """Process an Excel file and search for text."""
     try:
         workbook = xlrd.open_workbook(file_path)
         results = []
+
+        # Split search text into keywords for ANY/ALL modes
+        search_text = search_text.lower()
+        if search_mode in ("any", "all"):
+            keywords = list(set(filter(None, search_text.split())))
+        else:
+            keywords = [search_text]
 
         for sheet_index in range(workbook.nsheets):
             sheet = workbook.sheet_by_index(sheet_index)
             for row_idx in range(sheet.nrows):
                 for col_idx in range(sheet.ncols):
-                    cell_value = str(sheet.cell_value(row_idx, col_idx))
-                    if search_text.lower() in cell_value.lower():
-                        results.append(
-                            {
-                                "filename": os.path.basename(file_path),
-                                "sheet": sheet.name,
-                                "cell": xlrd.colname(col_idx) + str(row_idx + 1),
-                                "value": cell_value,
-                            }
-                        )
-        return results
-    except xlrd.XLRDError as e:
-        # Handle specific Excel file errors
-        error_msg = str(e)
-        if "Unsupported format" in error_msg:
-            app.logger.error(f"File format not supported: {file_path}")
-            return {
-                "error": "This Excel file format is not supported. Please ensure it is a valid .xls file."
-            }
-        elif "Password protected" in error_msg:
-            app.logger.error(f"Password protected file: {file_path}")
-            return {
-                "error": "This Excel file is password protected and cannot be read."
-            }
-        else:
-            app.logger.error(f"Error processing file {file_path}: {e}")
-            return {
-                "error": "Unable to read this Excel file. Please ensure it is not corrupted."
-            }
+                    try:
+                        cell_value = str(sheet.cell_value(row_idx, col_idx)).lower()
+                        if not cell_value:
+                            continue
+
+                        match = False
+                        if search_mode == "exact":
+                            match = keywords[0] in cell_value
+                        elif search_mode == "any":
+                            match = any(keyword in cell_value for keyword in keywords)
+                        elif search_mode == "all":
+                            match = all(keyword in cell_value for keyword in keywords)
+
+                        if match:
+                            results.append(
+                                {
+                                    "filename": os.path.basename(file_path),
+                                    "sheet": sheet.name,
+                                    "cell": format_cell_address(
+                                        row_idx + 1, col_idx + 1
+                                    ),
+                                    "value": str(sheet.cell_value(row_idx, col_idx)),
+                                }
+                            )
+                    except Exception as e:
+                        logger.error(f"Error processing cell in {file_path}: {str(e)}")
+                        continue
+
+        return {"results": results, "count": len(results)}
     except Exception as e:
-        app.logger.error(f"Unexpected error processing file {file_path}: {e}")
-        return {"error": "An unexpected error occurred while reading this file."}
+        logger.error(f"Error processing file {file_path}: {str(e)}")
+        return {"error": str(e), "skipped": True}
 
 
 @app.route("/")
@@ -103,8 +168,13 @@ def search():
         return jsonify({"error": "No file or folder path provided"}), 400
 
     search_text = request.form.get("search_text", "").strip()
+    search_mode = request.form.get("search_mode", "exact")
+
     if not search_text:
         return jsonify({"error": "No search text provided"}), 400
+
+    if search_mode not in ("exact", "any", "all"):
+        return jsonify({"error": "Invalid search mode"}), 400
 
     results = []
     total_files = 0
@@ -125,8 +195,9 @@ def search():
             total_files = len(excel_files)
 
             for file_path in excel_files:
-                file_results = process_excel_file(file_path, search_text)
-                results.extend(file_results)
+                file_results = process_excel_file(file_path, search_text, search_mode)
+                if isinstance(file_results, list):
+                    results.extend(file_results)
                 processed_files += 1
 
                 # Send progress update
@@ -135,7 +206,6 @@ def search():
                     {"progress": progress, "file": os.path.basename(file_path)},
                     type="progress",
                 )
-
         else:
             file = request.files["file"]
             if not file or not file.filename.endswith(".xls"):
@@ -146,7 +216,7 @@ def search():
             )
             file.save(temp_path)
 
-            results = process_excel_file(temp_path, search_text)
+            results = process_excel_file(temp_path, search_text, search_mode)
             os.remove(temp_path)  # Clean up temporary file
 
         return jsonify(results)
@@ -168,106 +238,109 @@ def find_excel_files(folder_path):
     return xls_files
 
 
-@app.route("/search_folder", methods=["GET", "POST"])
+@app.route("/search_folder")
 def search_folder():
-    try:
-        # Handle both GET and POST requests
-        if request.method == "GET":
-            folder_path = request.args.get("folder_path")
-            search_text = request.args.get("search_text")
-        else:
-            data = request.get_json()
-            folder_path = data.get("folder_path")
-            search_text = data.get("search_text")
+    search_text = request.args.get("search_text")
+    folder_path = request.args.get("folder_path")
+    search_mode = request.args.get("search_mode", "exact")
 
-        if not folder_path or not search_text:
-            return jsonify({"error": "Missing folder path or search text"}), 400
+    if not search_text or not folder_path:
+        return jsonify({"error": "Missing required parameters"}), 400
 
-        folder_path = os.path.expanduser(folder_path)
+    def generate():
+        search_id = str(uuid.uuid4())
+        cancel_event = threading.Event()
+        active_searches[search_id] = cancel_event
+        total_results = 0
+        all_results = []
 
-        if not os.path.exists(folder_path):
-            return jsonify({"error": "Folder path does not exist"}), 400
+        try:
+            # Send search ID first
+            yield f"data: {json.dumps({'search_id': search_id})}\n\n"
 
-        if not os.path.isdir(folder_path):
-            return jsonify({"error": "Path is not a directory"}), 400
+            if not os.path.exists(folder_path):
+                yield f"data: {json.dumps({'error': 'Folder not found'})}\n\n"
+                return
 
-        # Find all .xls files recursively
-        xls_files = find_excel_files(folder_path)
+            xls_files = [
+                f
+                for f in glob.glob(
+                    os.path.join(folder_path, "**/*.xls"), recursive=True
+                )
+            ]
+            if not xls_files:
+                yield f"data: {json.dumps({'error': 'No .xls files found in folder'})}\n\n"
+                return
 
-        if not xls_files:
-            return (
-                jsonify(
-                    {
-                        "error": "No .xls files found in the specified folder or its subdirectories"
-                    }
-                ),
-                400,
-            )
-
-        def generate():
             total_files = len(xls_files)
-            processed_files = 0
-            all_results = []
+            processed = 0
+            skipped_files = []
 
-            def process_file(file_path):
+            for file_path in xls_files:
+                # Check for cancellation
+                if cancel_event.is_set():
+                    logger.info(f"Search {search_id} cancelled")
+                    yield f"data: {json.dumps({'type': 'cancelled'})}\n\n"
+                    return
+
+                processed += 1
                 try:
-                    results = process_excel_file(file_path, search_text)
-                    if isinstance(results, list):
-                        for result in results:
-                            # Use relative path from the selected folder
-                            rel_path = os.path.relpath(file_path, folder_path)
-                            result["filename"] = rel_path
-                        return results
-                    return []
+                    result = process_excel_file(file_path, search_text, search_mode)
+                    if "results" in result:
+                        all_results.extend(result["results"])
+                        total_results += result["count"]
+                    elif result.get("skipped"):
+                        skipped_files.append(
+                            {
+                                "file": os.path.basename(file_path),
+                                "reason": result.get("error", "Unknown error"),
+                            }
+                        )
                 except Exception as e:
-                    logger.error(f"Error processing file {file_path}: {str(e)}")
-                    return []
+                    logger.error(f"Error processing {file_path}: {str(e)}")
+                    skipped_files.append(
+                        {"file": os.path.basename(file_path), "reason": str(e)}
+                    )
+                    continue
 
-            # Process files in parallel using ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-                future_to_file = {
-                    executor.submit(process_file, file_path): file_path
-                    for file_path in xls_files
+                # Send progress update
+                progress_data = {
+                    "type": "progress",
+                    "current_file": os.path.basename(file_path),
+                    "processed": processed,
+                    "total": total_files,
+                    "skipped_files": len(skipped_files),
+                    "results_found": total_results,
                 }
+                yield f"data: {json.dumps(progress_data)}\n\n"
 
-                for future in as_completed(future_to_file):
-                    file_path = future_to_file[future]
-                    try:
-                        results = future.result()
-                        all_results.extend(results)
-                        processed_files += 1
+                # Check for cancellation again after progress update
+                if cancel_event.is_set():
+                    logger.info(f"Search {search_id} cancelled after progress update")
+                    yield f"data: {json.dumps({'type': 'cancelled'})}\n\n"
+                    return
 
-                        # Send progress update
-                        progress = {
-                            "type": "progress",
-                            "processed": processed_files,
-                            "total": total_files,
-                            "current_file": os.path.relpath(file_path, folder_path),
-                            "found_results": len(all_results),
-                        }
-                        yield f"data: {json.dumps(progress)}\n\n"
+            # Send completion data
+            completion_data = {
+                "type": "complete",
+                "results": all_results,
+                "total_processed": processed,
+                "total_skipped": len(skipped_files),
+                "skipped_files": skipped_files,
+                "total_results": total_results,
+            }
+            yield f"data: {json.dumps(completion_data)}\n\n"
 
-                    except Exception as e:
-                        logger.error(f"Error processing file {file_path}: {str(e)}")
-                        processed_files += 1
+        except Exception as e:
+            logger.error(f"Error in search {search_id}: {str(e)}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
-            # Send final results
-            final_data = {"type": "complete", "results": all_results}
-            yield f"data: {json.dumps(final_data)}\n\n"
+        finally:
+            logger.info(f"Cleaning up search {search_id}")
+            if search_id in active_searches:
+                del active_searches[search_id]
 
-        # Set CORS headers for SSE
-        headers = {
-            "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Access-Control-Allow-Origin": "*",
-        }
-
-        return Response(generate(), mimetype="text/event-stream", headers=headers)
-
-    except Exception as e:
-        logger.error(f"Error in search_folder endpoint: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+    return Response(generate(), mimetype="text/event-stream")
 
 
 def is_folder_service_running():
@@ -280,13 +353,20 @@ def is_folder_service_running():
 
 def start_folder_service():
     try:
+        # Use the full path to npm
+        npm_path = "/opt/homebrew/bin/npm"
+        node_path = "/opt/homebrew/bin/node"
+
         # Start the folder selection service
         process = subprocess.Popen(
-            ["npm", "start"],
+            [npm_path, "start"],
             cwd="folder_service",
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
+            env=dict(
+                os.environ, PATH=f"/opt/homebrew/bin:{os.environ.get('PATH', '')}"
+            ),
         )
 
         # Wait for service to start (max 10 seconds)
@@ -313,6 +393,48 @@ def cleanup_services(folder_service_process):
             folder_service_process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             folder_service_process.kill()
+
+
+@app.route("/skip-list", methods=["GET", "DELETE"])
+def manage_skip_list():
+    if request.method == "GET":
+        skip_list = load_skip_list()
+        return jsonify({"skip_list": list(skip_list)})
+    elif request.method == "DELETE":
+        try:
+            # Clear the skip list
+            save_skip_list(set())
+            return jsonify({"message": "Skip list cleared successfully"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+
+@app.route("/cancel-search/<search_id>", methods=["POST"])
+def cancel_search(search_id):
+    """Cancel an active search operation."""
+    try:
+        if search_id in active_searches:
+            logger.info(f"Cancelling search {search_id}")
+            active_searches[search_id].set()  # Signal cancellation
+            # Wait a moment to ensure the search thread sees the cancellation
+            time.sleep(0.1)
+            return jsonify({"status": "cancelled", "search_id": search_id})
+        logger.warning(f"Search {search_id} not found for cancellation")
+        return jsonify({"error": "Search not found"}), 404
+    except Exception as e:
+        logger.error(f"Error cancelling search {search_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+def cleanup_search(search_id):
+    """Clean up search resources."""
+    try:
+        if search_id in search_events:
+            del search_events[search_id]
+        if search_id in active_searches:
+            del active_searches[search_id]
+    except Exception as e:
+        logger.error(f"Error cleaning up search {search_id}: {e}")
 
 
 if __name__ == "__main__":

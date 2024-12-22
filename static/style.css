@@ -14,6 +14,8 @@
   --spinner-color: #4a90e2;
   --error-text: #9b1c1c;
   --error-border: #f8b4b4;
+  --success-bg: #4caf50;
+  --success-text: #fff;
 }
 
 :root[data-theme="dark"] {
@@ -31,6 +33,8 @@
   --spinner-color: #4a90e2;
   --error-text: #f8b4b4;
   --error-border: #9b1c1c;
+  --success-bg: #43a047;
+  --success-text: #fff;
 }
 
 /* Reset and base styles */
@@ -609,5 +613,220 @@ button:hover {
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+.search-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 20px;
+}
+
+.search-container input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--text-color);
+}
+
+.search-mode {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 4px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.radio-label:hover {
+  background: var(--hover-bg);
+}
+
+.radio-label input[type="radio"] {
+  margin: 0;
+}
+
+.radio-label span {
+  color: var(--text-color);
+  font-size: 0.9em;
+}
+
+/* Selected state */
+.radio-label input[type="radio"]:checked + span {
+  font-weight: bold;
+}
+
+.radio-label input[type="radio"]:checked {
+  accent-color: var(--accent-color);
+}
+
+.skipped-files {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: var(--card-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.skipped-files h3 {
+  margin: 0 0 1rem 0;
+  color: var(--text-color);
+}
+
+.skipped-files-content {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+
+.skipped-file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  background: var(--hover-bg);
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.skipped-file-item:last-child {
+  margin-bottom: 0;
+}
+
+.file-name {
+  color: var(--text-color);
+  margin-right: 1rem;
+  word-break: break-all;
+}
+
+.file-reason {
+  color: var(--error-text);
+  font-size: 0.9em;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.secondary-button {
+  background: var(--hover-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.secondary-button:hover {
+  background: var(--button-bg);
+  color: var(--button-text);
+}
+
+.message {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--success-bg);
+  color: var(--success-text);
+  padding: 1rem 2rem;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease-out;
+  z-index: 1000;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.cancel-button {
+  background: var(--error-color);
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  margin-top: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cancel-button:hover {
+  background: var(--error-text);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.cancel-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cancel-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--error-border);
+}
+
+/* Add to loading section */
+.loading {
+  text-align: center;
+  margin: 2rem 0;
+  padding: 2rem;
+  background: var(--card-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.loading.hidden {
+  display: none;
+}
+
+.message {
+  background-color: var(--success-color);
+  color: white;
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 4px;
+  text-align: center;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

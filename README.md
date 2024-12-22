@@ -1,16 +1,22 @@
 # ExcelSeeker
 
-A web-based application for searching through Excel (.xls) files.
+A web-based application for searching through Excel (.xls) files with real-time progress tracking and advanced features.
 
 ## Features
 
-- Upload .xls files
-- Search through Excel files for specific text
-- Real-time search results
-- Clean and responsive interface
-- Native folder selection dialog
+- Upload and search through .xls files
+- Folder-based search with recursive scanning
+- Real-time search progress tracking
+- Search cancellation support
+- Skipped files tracking and management
 - Dark mode support
-- Multi-file search support
+- Native folder selection dialog
+- Result filtering and sorting
+- Clean and responsive interface
+- Automatic service management
+- Corrupted file handling
+- Progress indicators
+- Result caching for better performance
 
 ## Prerequisites
 
@@ -83,11 +89,32 @@ python app.py
 ## Usage
 
 1. Open your browser and navigate to `http://localhost:8080`
-2. Choose between:
-   - Single file upload: Select an .xls file directly
-   - Folder search: Use the native folder selection dialog
-3. Enter your search text
-4. View results in real-time
+
+2. Choose your search mode:
+
+   - **Single File**: Upload and search within a single .xls file
+   - **Folder**: Search through all .xls files in a selected folder and subfolders
+
+3. Select your search options:
+
+   - **Exact phrase**: Match the exact search text
+   - **Any keywords**: Match any of the words in the search text
+   - **All keywords**: Match all words in the search text
+
+4. Enter your search text and start the search
+
+5. During folder searches:
+
+   - View real-time progress updates
+   - Cancel the search at any time
+   - See which files were skipped and why
+   - Clear the skip list if needed
+
+6. Working with results:
+   - Filter results by any column
+   - Sort results by clicking column headers
+   - Toggle between light and dark mode
+   - View detailed file information
 
 ## Architecture
 
@@ -96,8 +123,10 @@ The application consists of two main components:
 1. **Flask Backend (Port 8080)**
 
    - Handles file processing and search
+   - Manages search cancellation
+   - Provides real-time progress updates
+   - Handles skip list management
    - Serves the web interface
-   - Manages file operations
 
 2. **Folder Selection Service (Port 3000)**
    - Node.js + Electron service
@@ -110,6 +139,8 @@ The application consists of two main components:
 - Frontend is built with vanilla JavaScript
 - Excel file processing uses xlrd library
 - Native folder selection uses Electron
+- Real-time updates via Server-Sent Events (SSE)
+- Progress tracking with event-based architecture
 
 ## License
 
