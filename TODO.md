@@ -149,6 +149,9 @@ excel_seeker/
    - [x] Recursive folder search
    - [x] Corrupted file handling
    - [x] Skip list management
+   - [x] Skip list persistence with error tracking
+   - [x] Accurate file counting with skip list integration
+   - [x] Automatic skip list updates for failed files
 
 4. **Results Enhancement**
    - [x] Sort/filter results
@@ -159,6 +162,7 @@ excel_seeker/
    - [x] Result caching
    - [x] Progress tracking
    - [x] Skipped files display
+   - [x] Detailed error tracking for skipped files
 
 ## Testing Status
 

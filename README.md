@@ -9,6 +9,9 @@ A web-based application for searching through Excel (.xls) files with real-time 
 - Real-time search progress tracking
 - Search cancellation support
 - Skipped files tracking and management
+- Persistent skip list with error tracking
+- Accurate file counting with skip list integration
+- Automatic skip list updates for failed files
 - Dark mode support
 - Native folder selection dialog
 - Result filtering and sorting
@@ -108,13 +111,15 @@ python app.py
    - View real-time progress updates
    - Cancel the search at any time
    - See which files were skipped and why
+   - Files that fail to process are automatically added to skip list
+   - Progress shows accurate count excluding skipped files
    - Clear the skip list if needed
 
 6. Working with results:
    - Filter results by any column
    - Sort results by clicking column headers
    - Toggle between light and dark mode
-   - View detailed file information
+   - View detailed error messages for skipped files
 
 ## Architecture
 

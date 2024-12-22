@@ -62,40 +62,44 @@ def load_skip_list():
             ):  # Only try to load if file is not empty
                 try:
                     with open(SKIP_LIST_FILE, "r") as f:
-                        return set(json.load(f))
+                        data = json.load(f)
+                        # Handle both old format (list of strings) and new format (dict)
+                        if isinstance(data, list):
+                            return {path: "Unknown reason" for path in data}
+                        return data
                 except json.JSONDecodeError:
                     logger.error("Skip list file is corrupted. Creating new one.")
-                    save_skip_list(set())  # Reset the file if corrupted
-                    return set()
+                    save_skip_list({})  # Reset the file if corrupted
+                    return {}
             else:
                 logger.info("Skip list file is empty")
-                return set()
+                return {}
         else:
             logger.info("Skip list file does not exist. Creating new one.")
-            save_skip_list(set())  # Create the file if it doesn't exist
-            return set()
+            save_skip_list({})  # Create the file if it doesn't exist
+            return {}
     except Exception as e:
         logger.error(f"Error loading skip list: {e}")
-        return set()
+        return {}
 
 
 def save_skip_list(skip_list):
     """Save the skip list to JSON file."""
     try:
-        # Ensure the skip list is a set of strings
-        skip_list = set(str(path) for path in skip_list)
-        # Convert to list for JSON serialization
+        # Ensure all values are strings
+        skip_list = {str(path): str(reason) for path, reason in skip_list.items()}
         with open(SKIP_LIST_FILE, "w") as f:
-            json.dump(list(skip_list), f, indent=2)
+            json.dump(skip_list, f, indent=2)
     except Exception as e:
         logger.error(f"Error saving skip list: {e}")
 
 
-def add_to_skip_list(file_path):
-    """Add a file to the skip list."""
+def add_to_skip_list(file_path, reason="Unknown error"):
+    """Add a file to the skip list with a reason."""
     try:
         skip_list = load_skip_list()
-        skip_list.add(str(os.path.abspath(file_path)))  # Ensure path is string
+        abs_path = str(os.path.abspath(file_path))
+        skip_list[abs_path] = str(reason)
         save_skip_list(skip_list)
     except Exception as e:
         logger.error(f"Error adding to skip list: {e}")
@@ -262,6 +266,7 @@ def search_folder():
                 yield f"data: {json.dumps({'error': 'Folder not found'})}\n\n"
                 return
 
+            # Get all XLS files
             xls_files = [
                 f
                 for f in glob.glob(
@@ -272,6 +277,11 @@ def search_folder():
                 yield f"data: {json.dumps({'error': 'No .xls files found in folder'})}\n\n"
                 return
 
+            # Load skip list and filter out skipped files
+            skip_list = load_skip_list()
+            xls_files = [
+                f for f in xls_files if str(os.path.abspath(f)) not in skip_list
+            ]
             total_files = len(xls_files)
             processed = 0
             skipped_files = []
@@ -290,17 +300,23 @@ def search_folder():
                         all_results.extend(result["results"])
                         total_results += result["count"]
                     elif result.get("skipped"):
+                        error_msg = result.get("error", "Unknown error")
                         skipped_files.append(
                             {
                                 "file": os.path.basename(file_path),
-                                "reason": result.get("error", "Unknown error"),
+                                "reason": error_msg,
                             }
                         )
+                        # Add to persistent skip list
+                        add_to_skip_list(file_path, error_msg)
                 except Exception as e:
-                    logger.error(f"Error processing {file_path}: {str(e)}")
+                    error_msg = str(e)
+                    logger.error(f"Error processing {file_path}: {error_msg}")
                     skipped_files.append(
-                        {"file": os.path.basename(file_path), "reason": str(e)}
+                        {"file": os.path.basename(file_path), "reason": error_msg}
                     )
+                    # Add to persistent skip list
+                    add_to_skip_list(file_path, error_msg)
                     continue
 
                 # Send progress update
@@ -399,11 +415,16 @@ def cleanup_services(folder_service_process):
 def manage_skip_list():
     if request.method == "GET":
         skip_list = load_skip_list()
-        return jsonify({"skip_list": list(skip_list)})
+        # Convert to list of objects for frontend
+        skip_list_array = [
+            {"file": os.path.basename(path), "path": path, "reason": reason}
+            for path, reason in skip_list.items()
+        ]
+        return jsonify({"skip_list": skip_list_array})
     elif request.method == "DELETE":
         try:
             # Clear the skip list
-            save_skip_list(set())
+            save_skip_list({})
             return jsonify({"message": "Skip list cleared successfully"})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
