@@ -17,6 +17,9 @@ from collections import defaultdict
 import uuid
 import threading
 import platform
+import hashlib
+import pickle
+from datetime import datetime
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -32,6 +35,7 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
 ALLOWED_EXTENSIONS = {"xls"}
 MAX_WORKERS = 4  # Number of parallel file processing threads
 SKIP_LIST_FILE = "skip_list.json"
+CACHE_FILE = "search_cache.pkl"
 
 # Global variables
 folder_service_process = None
@@ -247,6 +251,61 @@ def find_excel_files(folder_path):
     return xls_files
 
 
+def calculate_directory_hash(folder_path, skip_list):
+    """Calculate a hash of the directory state including file contents and skip list."""
+    hasher = hashlib.sha256()
+
+    # Get all Excel files
+    xls_files = find_excel_files(folder_path)
+
+    # Sort files for consistent hashing
+    xls_files.sort()
+
+    for file_path in xls_files:
+        abs_path = str(os.path.abspath(file_path))
+        if abs_path in skip_list:
+            continue
+
+        try:
+            # Add file path, size, and modification time to hash
+            stats = os.stat(file_path)
+            file_info = f"{abs_path}|{stats.st_size}|{stats.st_mtime}"
+            hasher.update(file_info.encode())
+        except Exception as e:
+            logger.error(f"Error hashing file {file_path}: {str(e)}")
+            continue
+
+    # Add skip list to hash
+    hasher.update(json.dumps(skip_list, sort_keys=True).encode())
+
+    return hasher.hexdigest()
+
+
+def save_search_cache(cache_data):
+    """Save search results cache to file."""
+    try:
+        with open(CACHE_FILE, "wb") as f:
+            pickle.dump(cache_data, f)
+    except Exception as e:
+        logger.error(f"Error saving cache: {str(e)}")
+
+
+def load_search_cache():
+    """Load search results cache from file."""
+    try:
+        if os.path.exists(CACHE_FILE):
+            with open(CACHE_FILE, "rb") as f:
+                return pickle.load(f)
+    except Exception as e:
+        logger.error(f"Error loading cache: {str(e)}")
+    return {}
+
+
+def get_cache_key(folder_path, search_text, search_mode):
+    """Generate a cache key for the search parameters."""
+    return f"{folder_path}|{search_text}|{search_mode}"
+
+
 @app.route("/search_folder")
 def search_folder():
     """Handle folder search request."""
@@ -272,14 +331,36 @@ def search_folder():
                 yield f"data: {json.dumps({'error': 'Folder not found'})}\n\n"
                 return
 
+            # Load skip list
+            skip_list = load_skip_list()
+
+            # Calculate directory hash and check cache
+            dir_hash = calculate_directory_hash(folder_path, skip_list)
+            cache = load_search_cache()
+            cache_key = get_cache_key(folder_path, search_text, search_mode)
+
+            if cache_key in cache and cache[cache_key]["hash"] == dir_hash:
+                logger.info("Using cached results")
+                cached_data = cache[cache_key]
+                cached_response = {
+                    "type": "complete",
+                    "results": cached_data["results"],
+                    "total_processed": cached_data["total_processed"],
+                    "total_skipped": cached_data["total_skipped"],
+                    "skipped_files": cached_data["skipped_files"],
+                    "total_results": len(cached_data["results"]),
+                    "from_cache": True,
+                }
+                yield f"data: {json.dumps(cached_response)}\n\n"
+                return
+
             # Get all XLS files
             xls_files = find_excel_files(folder_path)
             if not xls_files:
                 yield f"data: {json.dumps({'error': 'No .xls files found in folder'})}\n\n"
                 return
 
-            # Load skip list and prepare skipped files info
-            skip_list = load_skip_list()
+            # Prepare skipped files info
             skipped_files = []
 
             # Check for previously skipped files in this folder
@@ -365,6 +446,18 @@ def search_folder():
                         yield f"data: {json.dumps({'type': 'cancelled'})}\n\n"
                         return
 
+            # Store results in cache
+            cache_data = {
+                "hash": dir_hash,
+                "timestamp": datetime.now().isoformat(),
+                "results": all_results,
+                "total_processed": processed,
+                "total_skipped": len(skipped_files),
+                "skipped_files": skipped_files,
+            }
+            cache[cache_key] = cache_data
+            save_search_cache(cache)
+
             # Send completion data
             completion_data = {
                 "type": "complete",
@@ -373,10 +466,9 @@ def search_folder():
                 "total_skipped": len(skipped_files),
                 "skipped_files": skipped_files,
                 "total_results": total_results,
+                "from_cache": False,
             }
-            logger.info(
-                f"Search completed. Sending completion data: {completion_data}"
-            )  # Debug log
+            logger.info(f"Search completed. Sending completion data: {completion_data}")
             yield f"data: {json.dumps(completion_data)}\n\n"
 
         except Exception as e:
@@ -464,13 +556,38 @@ def cleanup_services(folder_service_process):
                 else:
                     os.killpg(os.getpgid(folder_service_process.pid), signal.SIGKILL)
 
-            # Additional cleanup to ensure port release
-            if platform.system().lower() == "windows":
-                subprocess.run(["netstat", "-ano", "|", "findstr", ":3000"], shell=True)
-            else:
-                subprocess.run(
-                    ["lsof", "-ti", ":3000", "|", "xargs", "kill", "-9"], shell=True
-                )
+            # Force kill any remaining processes on port 3000
+            try:
+                if platform.system().lower() == "darwin":  # macOS
+                    subprocess.run(["pkill", "-f", "node.*folder_service"])
+                    subprocess.run(
+                        ["lsof", "-ti", ":3000", "|", "xargs", "kill", "-9"], shell=True
+                    )
+                elif platform.system().lower() == "windows":
+                    subprocess.run(
+                        [
+                            "taskkill",
+                            "/F",
+                            "/IM",
+                            "node.exe",
+                            "/FI",
+                            "WINDOWTITLE eq folder_service",
+                        ]
+                    )
+                    subprocess.run(
+                        [
+                            "taskkill",
+                            "/F",
+                            "/PID",
+                            "$(netstat -ano | findstr :3000 | awk '{print $5}')",
+                        ],
+                        shell=True,
+                    )
+                else:  # Linux
+                    subprocess.run(["pkill", "-f", "node.*folder_service"])
+                    subprocess.run(["fuser", "-k", "3000/tcp"], shell=True)
+            except Exception as e:
+                logger.warning(f"Error force killing processes: {str(e)}")
 
             logger.info("Service cleanup completed")
         except Exception as e:
@@ -567,8 +684,29 @@ def restart_services():
             cleanup_services(folder_service_process)
             folder_service_process = None
 
-            # Give the system time to fully release resources
-            time.sleep(2)
+        # Force kill any remaining processes on port 3000
+        try:
+            if platform.system().lower() == "darwin":  # macOS
+                subprocess.run(
+                    ["lsof", "-ti", ":3000", "|", "xargs", "kill", "-9"], shell=True
+                )
+            elif platform.system().lower() == "windows":
+                subprocess.run(
+                    [
+                        "taskkill",
+                        "/F",
+                        "/PID",
+                        "$(netstat -ano | findstr :3000 | awk '{print $5}')",
+                    ],
+                    shell=True,
+                )
+            else:  # Linux
+                subprocess.run(["fuser", "-k", "3000/tcp"], shell=True)
+        except Exception as e:
+            logger.warning(f"Error force killing port 3000: {str(e)}")
+
+        # Give the system time to fully release resources
+        time.sleep(2)
 
         # Start the folder service again
         logger.info("Starting new folder service...")

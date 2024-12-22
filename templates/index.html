@@ -567,143 +567,101 @@
         };
       }
 
-      // Update the filtering functionality
-      document.addEventListener("DOMContentLoaded", function () {
-        let currentSort = { column: null, direction: "asc" };
-        const MIN_FILTER_LENGTH = 2; // Minimum characters before filtering
-        let cachedResults = []; // Cache for filtered results
+      // Add sorting and filtering functionality
+      let currentSort = { column: -1, direction: 1 };
+      let currentFilter = { text: "", column: "all" };
 
-        // Sorting functionality
-        document.querySelectorAll(".sortable").forEach((header) => {
-          header.addEventListener("click", () => {
-            const column = header.dataset.sort;
+      function sortTable(columnIndex) {
+        const tbody = document.getElementById("resultsBody");
+        const rows = Array.from(tbody.getElementsByTagName("tr"));
 
-            // Update sort direction
-            if (currentSort.column === column) {
-              currentSort.direction =
-                currentSort.direction === "asc" ? "desc" : "asc";
-            } else {
-              currentSort.column = column;
-              currentSort.direction = "asc";
-            }
+        // Update sort direction
+        if (currentSort.column === columnIndex) {
+          currentSort.direction *= -1;
+        } else {
+          currentSort.direction = 1;
+        }
+        currentSort.column = columnIndex;
 
-            // Update sort icons
-            document.querySelectorAll(".sort-icon").forEach((icon) => {
-              icon.textContent = "↕";
-            });
-            header.querySelector(".sort-icon").textContent =
-              currentSort.direction === "asc" ? "↑" : "↓";
+        // Update sort icons
+        document.querySelectorAll(".sort-icon").forEach((icon) => {
+          icon.textContent = "↕";
+        });
+        const currentIcon =
+          document.querySelectorAll(".sort-icon")[columnIndex];
+        currentIcon.textContent = currentSort.direction === 1 ? "↓" : "↑";
 
-            // Sort and display results
-            if (window.searchResults) {
-              applyFiltersAndSort();
-            }
-          });
+        // Sort rows
+        rows.sort((a, b) => {
+          const aValue = a.cells[columnIndex].textContent.trim().toLowerCase();
+          const bValue = b.cells[columnIndex].textContent.trim().toLowerCase();
+          return aValue.localeCompare(bValue) * currentSort.direction;
         });
 
-        // Filtering functionality
-        const filterInput = document.getElementById("filterInput");
-        const filterColumn = document.getElementById("filterColumn");
-        const resultsSection = document.getElementById("resultsSection");
+        // Reapply current filter
+        applyFiltersAndSort(rows);
+      }
+
+      function filterResults() {
+        const filterText = document
+          .getElementById("filterInput")
+          .value.toLowerCase();
+        const filterColumn = document.getElementById("filterColumn").value;
+
+        currentFilter.text = filterText;
+        currentFilter.column = filterColumn;
+
         const tbody = document.getElementById("resultsBody");
+        const rows = Array.from(tbody.getElementsByTagName("tr"));
+
+        applyFiltersAndSort(rows);
+      }
+
+      function applyFiltersAndSort(rows) {
+        const tbody = document.getElementById("resultsBody");
+        tbody.innerHTML = "";
+
+        // Apply filter
+        const filteredRows = rows.filter((row) => {
+          let text = "";
+          if (currentFilter.column === "all") {
+            text = row.textContent.toLowerCase();
+          } else {
+            const columnIndex = {
+              filename: 0,
+              sheet: 1,
+              cell: 2,
+              value: 3,
+            }[currentFilter.column];
+            text = row.cells[columnIndex].textContent.toLowerCase();
+          }
+          return text.includes(currentFilter.text);
+        });
+
+        // Update results count and visibility
+        updateResultsTable(filteredRows);
+
+        // Add filtered and sorted rows back to table
+        filteredRows.forEach((row) => tbody.appendChild(row));
+      }
+
+      function updateResultsTable(filteredRows) {
+        const resultsSection = document.getElementById("resultsSection");
         const noResults = document.querySelector(".no-results");
 
-        function applyFiltersAndSort() {
-          if (!window.searchResults) return;
-
-          const filterText = filterInput.value.toLowerCase();
-          const column = filterColumn.value;
-
-          // Skip filtering if text is too short
-          if (filterText.length > 0 && filterText.length < MIN_FILTER_LENGTH) {
-            return;
+        if (filteredRows.length === 0) {
+          if (!noResults) {
+            const noResultsDiv = document.createElement("div");
+            noResultsDiv.className = "no-results";
+            noResultsDiv.textContent = "No matching results found";
+            resultsSection.appendChild(noResultsDiv);
           }
-
-          // Start with all results if no filter, or use cached results
-          let filteredResults =
-            filterText.length >= MIN_FILTER_LENGTH
-              ? cachedResults
-              : [...window.searchResults];
-
-          // Apply filter
-          if (filterText.length >= MIN_FILTER_LENGTH) {
-            filteredResults = window.searchResults.filter((result) => {
-              if (column === "all") {
-                // Optimize by checking length first and using early return
-                return Object.values(result).some((value) => {
-                  const strValue = String(value).toLowerCase();
-                  return strValue.includes(filterText);
-                });
-              }
-              return String(result[column]).toLowerCase().includes(filterText);
-            });
-            cachedResults = filteredResults; // Cache the filtered results
+        } else {
+          if (noResults) {
+            noResults.remove();
           }
-
-          // Apply sort if needed
-          if (currentSort.column) {
-            filteredResults.sort((a, b) => {
-              let valueA = String(a[currentSort.column]).toLowerCase();
-              let valueB = String(b[currentSort.column]).toLowerCase();
-              return currentSort.direction === "asc"
-                ? valueA.localeCompare(valueB)
-                : valueB.localeCompare(valueA);
-            });
-          }
-
-          // Update UI
-          updateResultsTable(filteredResults);
         }
-
-        function updateResultsTable(results) {
-          tbody.innerHTML = "";
-
-          if (results.length === 0) {
-            noResults.classList.remove("hidden");
-            return;
-          }
-
-          noResults.classList.add("hidden");
-          const fragment = document.createDocumentFragment();
-
-          results.forEach((result) => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td>${escapeHtml(result.filename)}</td>
-              <td>${escapeHtml(result.sheet)}</td>
-              <td>${escapeHtml(result.cell)}</td>
-              <td>${escapeHtml(result.value)}</td>
-            `;
-            fragment.appendChild(row);
-          });
-
-          tbody.appendChild(fragment);
-        }
-
-        // Debounce the filter function
-        const debouncedFilter = debounce(() => {
-          applyFiltersAndSort();
-        }, 300); // 300ms delay
-
-        filterInput.addEventListener("input", () => {
-          const filterText = filterInput.value.toLowerCase();
-
-          // Clear results if filter text is too short
-          if (filterText.length > 0 && filterText.length < MIN_FILTER_LENGTH) {
-            tbody.innerHTML = "";
-            noResults.classList.remove("hidden");
-            noResults.textContent = `Please enter at least ${MIN_FILTER_LENGTH} characters to search`;
-            return;
-          }
-
-          debouncedFilter();
-        });
-
-        filterColumn.addEventListener("change", () => {
-          cachedResults = []; // Clear cache when column changes
-          applyFiltersAndSort();
-        });
-      });
+      }
 
       document.addEventListener("DOMContentLoaded", function () {
         const form = document.getElementById("searchForm");
@@ -1012,59 +970,6 @@
             document.getElementById("restartButton").disabled = false;
           }
         });
-
-      // Add sorting functionality
-      let sortDirection = 1;
-      let lastSortedColumn = -1;
-
-      function sortTable(columnIndex) {
-        const tbody = document.getElementById("resultsBody");
-        const rows = Array.from(tbody.getElementsByTagName("tr"));
-
-        // Toggle sort direction if clicking the same column
-        if (lastSortedColumn === columnIndex) {
-          sortDirection *= -1;
-        } else {
-          sortDirection = 1;
-        }
-        lastSortedColumn = columnIndex;
-
-        rows.sort((a, b) => {
-          const aValue = a.cells[columnIndex].textContent.trim().toLowerCase();
-          const bValue = b.cells[columnIndex].textContent.trim().toLowerCase();
-          return aValue.localeCompare(bValue) * sortDirection;
-        });
-
-        // Clear and re-append sorted rows
-        tbody.innerHTML = "";
-        rows.forEach((row) => tbody.appendChild(row));
-      }
-
-      // Add filtering functionality
-      function filterResults() {
-        const filterText = document
-          .getElementById("filterInput")
-          .value.toLowerCase();
-        const filterColumn = document.getElementById("filterColumn").value;
-        const tbody = document.getElementById("resultsBody");
-        const rows = tbody.getElementsByTagName("tr");
-
-        for (let row of rows) {
-          let text = "";
-          if (filterColumn === "all") {
-            text = row.textContent.toLowerCase();
-          } else {
-            const columnIndex = {
-              filename: 0,
-              sheet: 1,
-              cell: 2,
-              value: 3,
-            }[filterColumn];
-            text = row.cells[columnIndex].textContent.toLowerCase();
-          }
-          row.style.display = text.includes(filterText) ? "" : "none";
-        }
-      }
     </script>
   </body>
 </html>
