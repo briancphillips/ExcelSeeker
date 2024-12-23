@@ -598,8 +598,16 @@
           return aValue.localeCompare(bValue) * currentSort.direction;
         });
 
-        // Reapply current filter
-        applyFiltersAndSort(rows);
+        // Clear and re-append sorted rows while maintaining visibility
+        tbody.innerHTML = "";
+        rows.forEach((row) => {
+          tbody.appendChild(row);
+        });
+
+        // Reapply current filter if exists
+        if (currentFilter.text) {
+          filterResults();
+        }
       }
 
       function filterResults() {
@@ -607,24 +615,23 @@
           .getElementById("filterInput")
           .value.toLowerCase();
         const filterColumn = document.getElementById("filterColumn").value;
-
-        currentFilter.text = filterText;
-        currentFilter.column = filterColumn;
-
         const tbody = document.getElementById("resultsBody");
         const rows = Array.from(tbody.getElementsByTagName("tr"));
 
-        applyFiltersAndSort(rows);
-      }
+        // Store current filter state
+        currentFilter.text = filterText;
+        currentFilter.column = filterColumn;
 
-      function applyFiltersAndSort(rows) {
-        const tbody = document.getElementById("resultsBody");
-        tbody.innerHTML = "";
+        // Show all rows if filter is empty
+        if (!filterText) {
+          rows.forEach((row) => (row.style.display = ""));
+          return;
+        }
 
         // Apply filter
-        const filteredRows = rows.filter((row) => {
+        rows.forEach((row) => {
           let text = "";
-          if (currentFilter.column === "all") {
+          if (filterColumn === "all") {
             text = row.textContent.toLowerCase();
           } else {
             const columnIndex = {
@@ -632,18 +639,26 @@
               sheet: 1,
               cell: 2,
               value: 3,
-            }[currentFilter.column];
+            }[filterColumn];
             text = row.cells[columnIndex].textContent.toLowerCase();
           }
-          return text.includes(currentFilter.text);
+          row.style.display = text.includes(filterText) ? "" : "none";
         });
 
-        // Update results count and visibility
-        updateResultsTable(filteredRows);
-
-        // Add filtered and sorted rows back to table
-        filteredRows.forEach((row) => tbody.appendChild(row));
+        // Update visibility of no results message
+        const visibleRows = rows.filter((row) => row.style.display !== "none");
+        updateResultsTable(visibleRows);
       }
+
+      // Add input event listener for real-time filtering
+      document.addEventListener("DOMContentLoaded", function () {
+        const filterInput = document.getElementById("filterInput");
+        const filterColumn = document.getElementById("filterColumn");
+
+        // Use input event instead of keyup for better handling of all input types
+        filterInput.addEventListener("input", filterResults);
+        filterColumn.addEventListener("change", filterResults);
+      });
 
       function updateResultsTable(filteredRows) {
         const resultsSection = document.getElementById("resultsSection");

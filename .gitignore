@@ -44,3 +44,4 @@ temp/
 *.xls
 *.xlsx
 *.csv
+skip_list.json

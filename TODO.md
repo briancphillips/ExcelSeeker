@@ -216,3 +216,44 @@ excel_seeker/
 ✅ Package installation considerations
 ✅ Node.js/Electron compatibility
 ✅ Service management compatibility
+
+## Search System Improvements
+
+### Metadata Search
+
+- [ ] Add ability to search folder names and file paths
+- [ ] Include file metadata in search results
+- [ ] Show folder structure in results
+
+### Pattern Recognition
+
+- [ ] Add support for searching budget codes (numbers in parentheses)
+- [ ] Add ability to recognize year patterns (e.g., "2022-2023")
+- [ ] Support for common budget/financial patterns
+
+### Advanced Search Options
+
+- [ ] Add "Search in file names only" option
+- [ ] Add "Search in folder names" option
+- [ ] Add "Search in file contents" option
+- [ ] Allow combining search options
+
+### Results Display
+
+- [ ] Show folder path hierarchy
+- [ ] Group results by folder
+- [ ] Show file access status (can/cannot be opened)
+- [ ] Add file status indicators (locked, corrupted, etc.)
+
+### Error Handling
+
+- [ ] Track and display which files couldn't be opened
+- [ ] Show reasons for access failures
+- [ ] Provide suggestions for resolving access issues
+
+### Skipped Files Improvements
+
+- [ ] Add filtering capability to skipped files list
+- [ ] Add sorting capability to skipped files list
+- [ ] Add column headers for better organization
+- [ ] Add status indicators for skipped files
