@@ -397,6 +397,7 @@ def search_folder():
                     skipped_files.append(
                         {
                             "file": os.path.basename(file_path),
+                            "path": abs_path,
                             "reason": skip_list[abs_path],
                         }
                     )

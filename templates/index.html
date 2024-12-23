@@ -255,8 +255,8 @@
                   placeholder="Filter skipped files..."
                 />
                 <select id="skipFilterColumn" class="filter-select">
-                  <option value="all">All Columns</option>
-                  <option value="filename">File Name</option>
+                  <option value="all">All Fields</option>
+                  <option value="filename">Path & Filename</option>
                   <option value="reason">Error Reason</option>
                 </select>
               </div>
@@ -1059,10 +1059,11 @@
           // Group skipped files by directory path
           const groupedSkipped = {};
           skippedFiles.forEach((file) => {
-            // Split the file path into directory and filename
-            const pathParts = file.file.split("/");
-            const filename = pathParts.pop();
-            const dirPath = pathParts.join("/");
+            // Get directory path from the full path
+            const dirPath = file.path
+              ? file.path.substring(0, file.path.lastIndexOf("/"))
+              : "/";
+            const filename = file.file;
 
             if (!groupedSkipped[dirPath]) {
               groupedSkipped[dirPath] = [];
@@ -1080,10 +1081,10 @@
               <td colspan="2">
                 <div class="file-group-header">
                   <div class="path-info">
-                    <span class="directory-path">${dirPath || "/"}</span>
+                    <span class="directory-path" title="${dirPath}">📁 ${dirPath}</span>
                     <span class="match-count">${fileErrors.length} file${
                 fileErrors.length > 1 ? "s" : ""
-              }</span>
+              } skipped</span>
                   </div>
                 </div>
               </td>
@@ -1246,6 +1247,11 @@
           let currentGroup = header;
           const items = [];
 
+          // Get the directory path from the header
+          const dirPath = header
+            .querySelector(".directory-path")
+            .textContent.toLowerCase();
+
           // Collect all items in this group
           while (
             currentGroup.nextElementSibling &&
@@ -1276,11 +1282,16 @@
             let text = "";
             if (filterColumn === "all") {
               text =
-                header.textContent.toLowerCase() +
+                dirPath +
                 " " +
-                item.textContent.toLowerCase();
+                item.querySelector(".file-name").textContent.toLowerCase() +
+                " " +
+                item.querySelector(".file-reason").textContent.toLowerCase();
             } else if (filterColumn === "filename") {
-              text = item.querySelector(".file-name").textContent.toLowerCase();
+              text =
+                dirPath +
+                "/" +
+                item.querySelector(".file-name").textContent.toLowerCase();
             } else if (filterColumn === "reason") {
               text = item
                 .querySelector(".file-reason")

@@ -1024,3 +1024,73 @@ tr:hover {
   color: var(--error-color);
   font-style: italic;
 }
+
+.skipped-table .group-header {
+  background-color: var(--hover-bg);
+  font-weight: 500;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.skipped-table .group-header .file-group-header {
+  background: linear-gradient(to right, var(--card-bg), var(--hover-bg));
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.skipped-table .group-header .directory-path {
+  color: var(--text-color);
+  font-family: monospace;
+  font-size: 0.95em;
+  padding: 0.5rem;
+  display: block;
+  background-color: var(--card-bg);
+  border-radius: 4px;
+  border-left: 3px solid var(--button-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.skipped-table .group-header .match-count {
+  color: var(--subtext-color);
+  font-size: 0.85em;
+  margin-top: 0.25rem;
+  margin-left: 0.5rem;
+}
+
+.skipped-table .group-item {
+  background-color: var(--card-bg);
+}
+
+.skipped-table .group-item:hover {
+  background-color: var(--hover-bg);
+}
+
+.skipped-table .group-item .file-name {
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.skipped-table .group-item .file-name::before {
+  content: "└─";
+  position: absolute;
+  left: 0.5rem;
+  color: var(--subtext-color);
+}
+
+.skipped-table .group-separator {
+  height: 0.5rem;
+  background-color: transparent;
+}
+
+.path-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem;
+}
+
+.path-info .match-count {
+  font-size: 0.8em;
+  color: var(--subtext-color);
+  margin-top: 0.25rem;
+}
