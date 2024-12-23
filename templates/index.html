@@ -153,9 +153,15 @@
                 type="text"
                 id="searchText"
                 name="search_text"
-                placeholder="Enter search text..."
+                placeholder="Enter natural language query (e.g., 'find travel expenses over $5000 from last quarter')"
                 required
               />
+              <p class="help-text">
+                Try natural language queries like:
+                <br />• "find travel expenses over $5000" <br />• "show budget
+                items from FY2023" <br />• "search for department 123 expenses
+                in Q2"
+              </p>
               <div class="search-mode">
                 <label class="radio-label">
                   <input
@@ -184,10 +190,10 @@
         <div id="loading" class="loading hidden">
           <div class="spinner"></div>
           <p>Searching...</p>
-          <p id="progress" class="progress-text"></p>
+          <p id="progress"></p>
           <div class="progress-bar-container">
             <div class="progress-bar"></div>
-            <div class="progress-text">0%</div>
+            <p class="progress-text">0%</p>
           </div>
           <button type="button" id="cancelSearch" class="cancel-button">
             Cancel Search
@@ -935,15 +941,11 @@
 
           if (data.type === "progress") {
             const percentage = Math.round((data.processed / data.total) * 100);
-            // Update main progress text
-            progressText.textContent = `${percentage}%`;
             // Update progress bar and its text
             progressBar.style.width = `${percentage}%`;
             progressBarText.textContent = `${percentage}%`;
             // Update the file details
-            document.querySelector(
-              "#loading p:nth-child(3)"
-            ).textContent = `Processing: ${data.current_file} (${data.processed}/${data.total} files, ${data.results_found} results found)`;
+            progressText.textContent = `Processing: ${data.current_file} (${data.processed}/${data.total} files, ${data.results_found} results found)`;
           } else if (data.type === "complete") {
             console.log("Search complete:", data); // Debug log
             eventSource.close();
@@ -1384,8 +1386,141 @@
           color: var(--text-color);
           opacity: 0.7;
         }
+
+        .help-text {
+          color: var(--subtext-color);
+          font-size: 0.9em;
+          margin-top: 0.5rem;
+          margin-bottom: 1rem;
+        }
+
+        .help-text code {
+          background: var(--background-secondary);
+          padding: 0.2em 0.4em;
+          border-radius: 3px;
+          font-family: monospace;
+        }
+
+        .query-example {
+          cursor: pointer;
+          color: var(--link-color);
+          text-decoration: underline;
+          display: inline-block;
+          margin-right: 1rem;
+        }
+
+        .query-example:hover {
+          color: var(--link-hover-color);
+        }
       `;
       document.head.appendChild(pathStyles);
+
+      // Add example query functionality
+      function setupExampleQueries() {
+        const searchInput = document.getElementById("searchText");
+        const examples = document.querySelectorAll(".help-text .query-example");
+
+        examples.forEach((example) => {
+          example.addEventListener("click", () => {
+            searchInput.value = example.textContent;
+            searchInput.focus();
+          });
+        });
+      }
+
+      // Update displayResults to handle NLP-specific result formatting
+      function displayResults(results) {
+        const tbody = document.getElementById("resultsBody");
+        const resultsSection = document.getElementById("resultsSection");
+
+        // Clear existing content
+        tbody.innerHTML = "";
+
+        if (!results || results.length === 0) {
+          resultsSection.classList.add("hidden");
+          showMessage("No results found.");
+          return;
+        }
+
+        // Show the results section
+        resultsSection.classList.remove("hidden");
+
+        // Group results by filename
+        const groupedResults = {};
+        results.forEach((result) => {
+          if (!groupedResults[result.filename]) {
+            groupedResults[result.filename] = [];
+          }
+          groupedResults[result.filename].push(result);
+        });
+
+        // Add each group to the table
+        Object.entries(groupedResults).forEach(
+          ([filename, fileResults], groupIndex) => {
+            // Add group header
+            const headerRow = document.createElement("tr");
+            headerRow.className = "group-header";
+            headerRow.innerHTML = `
+            <td colspan="4">
+              <div class="file-group-header">
+                <a href="#" 
+                   onclick="openFile('${escapeHtml(
+                     fileResults[0].filepath
+                   )}'); return false;" 
+                   class="file-link" 
+                   title="Click to open file">
+                  ${escapeHtml(filename)}
+                </a>
+                <span class="match-count">${fileResults.length} match${
+              fileResults.length > 1 ? "es" : ""
+            }</span>
+              </div>
+            </td>
+          `;
+            tbody.appendChild(headerRow);
+
+            // Add results for this file
+            fileResults.forEach((result) => {
+              const row = document.createElement("tr");
+              row.className = "group-item";
+
+              // Format the value based on result type
+              let formattedValue = result.value;
+              if (result.type === "date") {
+                formattedValue = `📅 ${result.value}`;
+              } else if (result.type === "monetary") {
+                formattedValue = `💰 ${result.value}`;
+              } else if (result.type === "budget_code") {
+                formattedValue = `🏷️ ${result.value}`;
+              }
+
+              row.innerHTML = `
+              <td></td>
+              <td>${escapeHtml(result.sheet)}</td>
+              <td>${escapeHtml(result.cell)}</td>
+              <td>${escapeHtml(formattedValue)}</td>
+            `;
+              tbody.appendChild(row);
+            });
+
+            // Add separator after each group except the last one
+            if (groupIndex < Object.keys(groupedResults).length - 1) {
+              const separatorRow = document.createElement("tr");
+              separatorRow.className = "group-separator";
+              separatorRow.innerHTML = '<td colspan="4"></td>';
+              tbody.appendChild(separatorRow);
+            }
+          }
+        );
+
+        // Store results for sorting/filtering
+        window.searchResults = results;
+      }
+
+      // Initialize example queries when the page loads
+      document.addEventListener("DOMContentLoaded", function () {
+        setupExampleQueries();
+      });
     </script>
   </body>
 </html>

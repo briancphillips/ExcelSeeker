@@ -21,6 +21,7 @@ import hashlib
 import pickle
 from datetime import datetime
 import socket
+from nlp.search_integration import SearchIntegration
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -35,11 +36,17 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
 )
 ALLOWED_EXTENSIONS = {"xls"}
 MAX_WORKERS = 4  # Number of parallel file processing threads
-SKIP_LIST_FILE = "skip_list.json"
-CACHE_FILE = "search_cache.pkl"
+SKIP_LIST_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "skip_list.json"
+)
+CACHE_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "search_cache.pkl"
+)
+CACHE_MAX_AGE = 7 * 24 * 60 * 60  # 7 days in seconds
 
 # Global variables
 folder_service_process = None
+search_integration = SearchIntegration()
 
 # Track active searches
 active_searches = {}
@@ -309,9 +316,35 @@ def calculate_directory_hash(folder_path, skip_list):
     return hasher.hexdigest()
 
 
+def cleanup_old_cache_entries():
+    """Remove cache entries older than CACHE_MAX_AGE."""
+    try:
+        cache = load_search_cache()
+        current_time = datetime.now()
+        updated_cache = {}
+
+        for key, data in cache.items():
+            try:
+                cache_time = datetime.fromisoformat(data["timestamp"])
+                if (current_time - cache_time).total_seconds() < CACHE_MAX_AGE:
+                    updated_cache[key] = data
+            except (ValueError, KeyError):
+                # Skip invalid entries
+                continue
+
+        if len(updated_cache) != len(cache):
+            save_search_cache(updated_cache)
+            logger.info(
+                f"Cleaned up {len(cache) - len(updated_cache)} old cache entries"
+            )
+    except Exception as e:
+        logger.error(f"Error cleaning up cache: {str(e)}")
+
+
 def save_search_cache(cache_data):
     """Save search results cache to file."""
     try:
+        os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
         with open(CACHE_FILE, "wb") as f:
             pickle.dump(cache_data, f)
     except Exception as e:
@@ -331,12 +364,17 @@ def load_search_cache():
 
 def get_cache_key(folder_path, search_text, search_mode):
     """Generate a cache key for the search parameters."""
-    return f"{folder_path}|{search_text}|{search_mode}"
+    # Include skip list in cache key to invalidate when skip list changes
+    skip_list = load_skip_list()
+    skip_list_hash = hashlib.sha256(
+        json.dumps(skip_list, sort_keys=True).encode()
+    ).hexdigest()
+    return f"{folder_path}|{search_text}|{search_mode}|{skip_list_hash}"
 
 
 @app.route("/search_folder")
 def search_folder():
-    """Handle folder search request."""
+    """Handle folder search request with natural language query support."""
     folder_path = request.args.get("folder_path")
     search_text = request.args.get("search_text")
     search_mode = request.args.get("search_mode", "exact")
@@ -352,6 +390,9 @@ def search_folder():
         all_results = []
 
         try:
+            # Clean up old cache entries
+            cleanup_old_cache_entries()
+
             # Send search ID first
             yield f"data: {json.dumps({'search_id': search_id})}\n\n"
 
@@ -359,13 +400,19 @@ def search_folder():
                 yield f"data: {json.dumps({'error': 'Folder not found'})}\n\n"
                 return
 
+            # Process natural language query
+            search_params = search_integration.process_query(search_text)
+            logger.info(f"Processed search parameters: {search_params}")
+
             # Load skip list
             skip_list = load_skip_list()
 
             # Calculate directory hash and check cache
             dir_hash = calculate_directory_hash(folder_path, skip_list)
             cache = load_search_cache()
-            cache_key = get_cache_key(folder_path, search_text, search_mode)
+            cache_key = get_cache_key(
+                folder_path, json.dumps(search_params), search_mode
+            )
 
             if cache_key in cache and cache[cache_key]["hash"] == dir_hash:
                 logger.info("Using cached results")
@@ -442,10 +489,20 @@ def search_folder():
 
                     processed += 1
                     try:
-                        result = process_excel_file(file_path, search_text, search_mode)
+                        # Use search parameters from NLP processing
+                        result = process_excel_file(
+                            file_path,
+                            search_params["search_text"],
+                            search_params.get("search_mode", search_mode),
+                        )
+
                         if "results" in result:
-                            all_results.extend(result["results"])
-                            total_results += result["count"]
+                            # Apply NLP-based filters to results
+                            filtered_results = search_integration.apply_filters(
+                                result["results"], search_params.get("filters", {})
+                            )
+                            all_results.extend(filtered_results)
+                            total_results += len(filtered_results)
                         elif result.get("skipped"):
                             error_msg = result.get("error", "Unknown error")
                             skipped_files.append(
