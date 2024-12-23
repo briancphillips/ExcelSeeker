@@ -20,6 +20,7 @@ import platform
 import hashlib
 import pickle
 from datetime import datetime
+import socket
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -541,9 +542,23 @@ def is_folder_service_running():
 
 def start_folder_service():
     try:
-        # Use the full path to npm
+        # Use the full path to npm and node
         npm_path = "/opt/homebrew/bin/npm"
         node_path = "/opt/homebrew/bin/node"
+
+        # Verify port is available before starting
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(1)
+                s.bind(("127.0.0.1", 3000))
+                s.close()
+        except socket.error as e:
+            logger.error(f"Port 3000 is not available for service startup: {e}")
+            return None
+
+        # Set up environment with proper PATH
+        env = dict(os.environ)
+        env["PATH"] = f"/opt/homebrew/bin:{env.get('PATH', '')}"
 
         # Start the folder selection service
         process = subprocess.Popen(
@@ -552,22 +567,34 @@ def start_folder_service():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
-            env=dict(
-                os.environ, PATH=f"/opt/homebrew/bin:{os.environ.get('PATH', '')}"
-            ),
+            env=env,
+            preexec_fn=os.setsid if platform.system() != "Windows" else None,
         )
 
         # Wait for service to start (max 10 seconds)
         start_time = time.time()
         while time.time() - start_time < 10:
-            if is_folder_service_running():
-                logger.info("Folder selection service started successfully")
-                return process
-            time.sleep(0.5)
+            try:
+                response = requests.get("http://localhost:3000/health", timeout=1)
+                if response.status_code == 200:
+                    logger.info("Folder selection service started successfully")
+                    return process
+            except requests.exceptions.RequestException:
+                time.sleep(0.5)
+                continue
 
         # If we get here, service didn't start
-        process.terminate()
-        raise Exception("Folder selection service failed to start")
+        logger.error("Folder service failed to start within timeout period")
+        try:
+            if platform.system() != "Windows":
+                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+            else:
+                process.terminate()
+            process.wait(timeout=5)
+        except Exception as e:
+            logger.warning(f"Error terminating failed service startup: {e}")
+
+        return None
     except Exception as e:
         logger.error(f"Error starting folder service: {str(e)}")
         return None
@@ -578,68 +605,113 @@ def cleanup_services(folder_service_process):
     if folder_service_process:
         try:
             logger.info("Shutting down folder selection service...")
-            # Kill the process group to ensure all child processes are terminated
-            if platform.system().lower() == "windows":
+
+            if platform.system().lower() == "darwin":  # macOS
+                try:
+                    # First, try to get all PIDs using port 3000
+                    try:
+                        # Direct command to get PIDs, avoiding shell=True
+                        port_pids = subprocess.check_output(
+                            ["lsof", "-t", "-i", ":3000"]
+                        )
+                        pids = port_pids.decode().strip().split("\n")
+
+                        # Kill each process individually
+                        for pid in pids:
+                            if pid:  # Ensure PID is not empty
+                                try:
+                                    pid = int(pid)
+                                    os.kill(pid, signal.SIGKILL)
+                                    logger.info(f"Killed process {pid}")
+                                except (ValueError, ProcessLookupError) as e:
+                                    logger.warning(f"Failed to kill process {pid}: {e}")
+                    except subprocess.CalledProcessError:
+                        logger.info("No processes found on port 3000")
+
+                    # Kill specific processes
+                    process_patterns = [
+                        "node.*folder_service",
+                        "electron.*folder_service",
+                        "Electron",
+                    ]
+
+                    for pattern in process_patterns:
+                        try:
+                            pids = subprocess.check_output(["pgrep", "-f", pattern])
+                            for pid in pids.decode().strip().split("\n"):
+                                if pid:  # Ensure PID is not empty
+                                    try:
+                                        pid = int(pid)
+                                        os.kill(pid, signal.SIGKILL)
+                                        logger.info(
+                                            f"Killed process {pid} matching {pattern}"
+                                        )
+                                    except (ValueError, ProcessLookupError) as e:
+                                        logger.warning(
+                                            f"Failed to kill process {pid}: {e}"
+                                        )
+                        except subprocess.CalledProcessError:
+                            logger.info(f"No processes found matching {pattern}")
+
+                except Exception as e:
+                    logger.warning(f"Error during macOS cleanup: {str(e)}")
+
+            elif platform.system().lower() == "windows":
                 subprocess.run(
-                    ["taskkill", "/F", "/T", "/PID", str(folder_service_process.pid)]
+                    ["taskkill", "/F", "/T", "/PID", str(folder_service_process.pid)],
+                    check=False,
                 )
-            else:
-                os.killpg(os.getpgid(folder_service_process.pid), signal.SIGTERM)
+            else:  # Linux
+                try:
+                    os.killpg(os.getpgid(folder_service_process.pid), signal.SIGTERM)
+                except ProcessLookupError:
+                    logger.warning("Process group already terminated")
 
-            # Wait for the process to fully terminate
-            try:
-                folder_service_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                logger.warning("Process didn't terminate gracefully, forcing...")
-                if platform.system().lower() == "windows":
-                    subprocess.run(
-                        [
-                            "taskkill",
-                            "/F",
-                            "/T",
-                            "/PID",
-                            str(folder_service_process.pid),
-                        ]
-                    )
-                else:
-                    os.killpg(os.getpgid(folder_service_process.pid), signal.SIGKILL)
+            # Wait for processes to terminate
+            time.sleep(2)
 
-            # Force kill any remaining processes on port 3000
-            try:
-                if platform.system().lower() == "darwin":  # macOS
-                    subprocess.run(["pkill", "-f", "node.*folder_service"])
-                    subprocess.run(
-                        ["lsof", "-ti", ":3000", "|", "xargs", "kill", "-9"], shell=True
+            # Verify port is released
+            max_attempts = 5
+            attempt = 0
+            while attempt < max_attempts:
+                try:
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                        s.settimeout(1)
+                        s.bind(("127.0.0.1", 3000))
+                        s.close()
+                        logger.info("Port 3000 successfully released")
+                        return True
+                except socket.error:
+                    logger.warning(
+                        f"Port 3000 still in use, attempt {attempt + 1}/{max_attempts}"
                     )
-                elif platform.system().lower() == "windows":
-                    subprocess.run(
-                        [
-                            "taskkill",
-                            "/F",
-                            "/IM",
-                            "node.exe",
-                            "/FI",
-                            "WINDOWTITLE eq folder_service",
-                        ]
-                    )
-                    subprocess.run(
-                        [
-                            "taskkill",
-                            "/F",
-                            "/PID",
-                            "$(netstat -ano | findstr :3000 | awk '{print $5}')",
-                        ],
-                        shell=True,
-                    )
-                else:  # Linux
-                    subprocess.run(["pkill", "-f", "node.*folder_service"])
-                    subprocess.run(["fuser", "-k", "3000/tcp"], shell=True)
-            except Exception as e:
-                logger.warning(f"Error force killing processes: {str(e)}")
+                    if platform.system().lower() == "darwin":
+                        try:
+                            # Try one more time to find and kill processes on port 3000
+                            port_pids = subprocess.check_output(
+                                ["lsof", "-t", "-i", ":3000"]
+                            )
+                            for pid in port_pids.decode().strip().split("\n"):
+                                if pid:
+                                    try:
+                                        pid = int(pid)
+                                        os.kill(pid, signal.SIGKILL)
+                                    except (ValueError, ProcessLookupError):
+                                        pass
+                        except subprocess.CalledProcessError:
+                            pass
+                    time.sleep(2)
+                    attempt += 1
+
+            if attempt == max_attempts:
+                logger.error("Failed to release port 3000 after multiple attempts")
+                return False
 
             logger.info("Service cleanup completed")
+            return True
         except Exception as e:
             logger.error(f"Error during cleanup: {str(e)}")
+            return False
 
 
 @app.route("/skip-list", methods=["GET", "DELETE"])
@@ -735,32 +807,41 @@ def restart_services():
         # Stop the folder service if it's running
         if folder_service_process:
             logger.info("Stopping existing folder service...")
-            cleanup_services(folder_service_process)
+            if not cleanup_services(folder_service_process):
+                raise Exception("Failed to clean up existing services")
             folder_service_process = None
 
-        # Force kill any remaining processes on port 3000
-        try:
-            if platform.system().lower() == "darwin":  # macOS
-                subprocess.run(
-                    ["lsof", "-ti", ":3000", "|", "xargs", "kill", "-9"], shell=True
-                )
-            elif platform.system().lower() == "windows":
-                subprocess.run(
-                    [
-                        "taskkill",
-                        "/F",
-                        "/PID",
-                        "$(netstat -ano | findstr :3000 | awk '{print $5}')",
-                    ],
-                    shell=True,
-                )
-            else:  # Linux
-                subprocess.run(["fuser", "-k", "3000/tcp"], shell=True)
-        except Exception as e:
-            logger.warning(f"Error force killing port 3000: {str(e)}")
+        # Additional cleanup for macOS
+        if platform.system().lower() == "darwin":
+            try:
+                # Try to find and kill any remaining processes
+                try:
+                    port_pids = subprocess.check_output(["lsof", "-t", "-i", ":3000"])
+                    for pid in port_pids.decode().strip().split("\n"):
+                        if pid:
+                            try:
+                                pid = int(pid)
+                                os.kill(pid, signal.SIGKILL)
+                                logger.info(f"Killed remaining process {pid}")
+                            except (ValueError, ProcessLookupError) as e:
+                                logger.warning(f"Failed to kill process {pid}: {e}")
+                except subprocess.CalledProcessError:
+                    logger.info("No remaining processes found on port 3000")
+            except Exception as e:
+                logger.warning(f"Error during additional macOS cleanup: {str(e)}")
 
         # Give the system time to fully release resources
-        time.sleep(2)
+        time.sleep(3)
+
+        # Final port check before starting new service
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(1)
+                s.bind(("127.0.0.1", 3000))
+                s.close()
+        except socket.error as e:
+            logger.error(f"Port 3000 still in use after all cleanup attempts: {e}")
+            raise Exception("Port 3000 still in use after cleanup")
 
         # Start the folder service again
         logger.info("Starting new folder service...")
@@ -768,10 +849,16 @@ def restart_services():
         if not new_folder_service:
             raise Exception("Failed to restart folder service")
 
-        folder_service_process = new_folder_service
-        logger.info("Services restarted successfully")
+        # Verify the service is responding
+        start_time = time.time()
+        while time.time() - start_time < 10:
+            if is_folder_service_running():
+                folder_service_process = new_folder_service
+                logger.info("Services restarted successfully")
+                return jsonify({"message": "Services restarted successfully"})
+            time.sleep(0.5)
 
-        return jsonify({"message": "Services restarted successfully"})
+        raise Exception("Folder service not responding after restart")
     except Exception as e:
         logger.error(f"Error restarting services: {str(e)}")
         return jsonify({"error": str(e)}), 500
