@@ -1,0 +1,27 @@
+appId: com.excelseeker.folderservice
+productName: ExcelSeeker Folder Service
+directories:
+  output: dist
+  buildResources: build
+files:
+  - '**/*'
+  - '!node_modules/**/*'
+asar: true
+
+mac:
+  target: 
+    - zip
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: ../build/entitlements.mac.plist
+  entitlementsInherit: ../build/entitlements.mac.plist
+
+win:
+  target:
+    - portable
+
+linux:
+  target:
+    - AppImage
+
+publish: null 
