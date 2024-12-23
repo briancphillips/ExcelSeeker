@@ -163,23 +163,92 @@
                 in Q2"
               </p>
               <div class="search-mode">
-                <label class="radio-label">
-                  <input
-                    type="radio"
-                    name="search_mode"
-                    value="exact"
-                    checked
-                  />
-                  <span>Exact phrase</span>
-                </label>
-                <label class="radio-label">
-                  <input type="radio" name="search_mode" value="any" />
-                  <span>Any keywords</span>
-                </label>
-                <label class="radio-label">
-                  <input type="radio" name="search_mode" value="all" />
-                  <span>All keywords</span>
-                </label>
+                <label>Search Mode</label>
+                <div class="radio-group">
+                  <div class="radio-option">
+                    <input
+                      type="radio"
+                      id="exactMode"
+                      name="search_mode"
+                      value="exact"
+                      checked
+                    />
+                    <label for="exactMode">
+                      <i class="icon">🎯</i>
+                      Exact Match
+                    </label>
+                    <span class="check-icon">✓</span>
+                  </div>
+                  <div class="radio-option">
+                    <input
+                      type="radio"
+                      id="anyMode"
+                      name="search_mode"
+                      value="any"
+                    />
+                    <label for="anyMode">
+                      <i class="icon">🔍</i>
+                      Any Keywords
+                    </label>
+                    <span class="check-icon">✓</span>
+                  </div>
+                  <div class="radio-option">
+                    <input
+                      type="radio"
+                      id="allMode"
+                      name="search_mode"
+                      value="all"
+                    />
+                    <label for="allMode">
+                      <i class="icon">📝</i>
+                      All Keywords
+                    </label>
+                    <span class="check-icon">✓</span>
+                  </div>
+                  <div class="radio-option">
+                    <input
+                      type="radio"
+                      id="filenameMode"
+                      name="search_mode"
+                      value="filename"
+                    />
+                    <label for="filenameMode">
+                      <i class="icon">📄</i>
+                      Filename Only
+                    </label>
+                    <span class="check-icon">✓</span>
+                  </div>
+                </div>
+                <div id="filenameOptions" class="filename-options hidden">
+                  <div class="checkbox-group">
+                    <div class="checkbox-option">
+                      <input
+                        type="checkbox"
+                        id="useWildcard"
+                        name="use_wildcard"
+                      />
+                      <label for="useWildcard">Use wildcards (* and ?)</label>
+                    </div>
+                    <div class="checkbox-option">
+                      <input type="checkbox" id="useRegex" name="use_regex" />
+                      <label for="useRegex">Use regular expressions</label>
+                    </div>
+                  </div>
+                  <div class="filter-options">
+                    <input
+                      type="text"
+                      id="extensionFilter"
+                      name="extension_filter"
+                      placeholder="Filter by extension (e.g., xls,xlsx,csv)"
+                    />
+                    <input
+                      type="text"
+                      id="pathFilter"
+                      name="path_filter"
+                      placeholder="Filter by path pattern"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -249,7 +318,7 @@
           </div>
         </div>
 
-        <div id="skippedFiles" class="skipped-files hidden">
+        <div id="skippedFiles" class="skipped-files">
           <div class="skipped-header">
             <h3>Skipped Files</h3>
             <div class="skipped-controls">
@@ -296,7 +365,11 @@
                   </th>
                 </tr>
               </thead>
-              <tbody id="skippedFilesList"></tbody>
+              <tbody id="skippedFilesList">
+                <tr class="no-skipped-files">
+                  <td colspan="2">No skipped files to display</td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
@@ -400,15 +473,35 @@
           'input[name="search_mode"]:checked'
         ).value;
 
-        // Create EventSource for progress updates
-        const eventSource = new EventSource(
-          `/search_folder?folder_path=${encodeURIComponent(
-            folderPath
-          )}&search_text=${encodeURIComponent(
-            searchText
-          )}&search_mode=${searchMode}`
-        );
+        // Build the URL with search parameters
+        let searchUrl = `/search_folder?folder_path=${encodeURIComponent(
+          folderPath
+        )}&search_text=${encodeURIComponent(
+          searchText
+        )}&search_mode=${searchMode}`;
 
+        // Add filename search parameters if in filename mode
+        if (searchMode === "filename") {
+          const useWildcard = document.getElementById("useWildcard").checked;
+          const useRegex = document.getElementById("useRegex").checked;
+          const extensionFilter = document
+            .getElementById("extensionFilter")
+            .value.trim();
+          const pathFilter = document.getElementById("pathFilter").value.trim();
+
+          searchUrl += `&use_wildcard=${useWildcard}&use_regex=${useRegex}`;
+          if (extensionFilter) {
+            searchUrl += `&extension_filter=${encodeURIComponent(
+              extensionFilter
+            )}`;
+          }
+          if (pathFilter) {
+            searchUrl += `&path_filter=${encodeURIComponent(pathFilter)}`;
+          }
+        }
+
+        // Create EventSource for progress updates
+        const eventSource = new EventSource(searchUrl);
         handleEventSource(eventSource);
       }
 
@@ -818,9 +911,14 @@
         }
       }
 
+      // Consolidate all DOMContentLoaded event listeners into one
       document.addEventListener("DOMContentLoaded", function () {
+        // Form submission
         const form = document.getElementById("searchForm");
         form.addEventListener("submit", handleSubmit);
+
+        // Load skipped files on page load
+        loadSkippedFiles();
 
         // Setup file input change handler
         const fileInput = document.getElementById("fileInput");
@@ -843,317 +941,181 @@
               cancelSearch();
             }
           });
-      });
 
-      async function handleSubmit(event) {
-        event.preventDefault();
-
-        const searchText = document.getElementById("searchText").value.trim();
-        const searchMode = document.querySelector(
-          'input[name="search_mode"]:checked'
-        ).value;
-        const fileInput = document.getElementById("fileInput");
-        const folderPath = document.getElementById("folderPath").value.trim();
-
-        if (!searchText) {
-          showError("Please enter search text");
-          return;
-        }
-
-        // Show loading state and hide results
-        const loadingDiv = document.getElementById("loading");
-        loadingDiv.classList.remove("hidden");
-        document.getElementById("resultsSection").classList.add("hidden");
-        document.getElementById("error").style.display = "none";
-
-        const formData = new FormData();
-        formData.append("search_text", searchText);
-        formData.append("search_mode", searchMode);
-
-        try {
-          if (folderPath) {
-            await handleFolderSearch(folderPath, searchText);
-          } else if (fileInput.files.length > 0) {
-            formData.append("file", fileInput.files[0]);
-            const response = await fetch("/search", {
-              method: "POST",
-              body: formData,
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-              displayResults(data);
-            } else {
-              showError(data.error || "An error occurred while searching");
-            }
-            // Hide cancel button for single file search
-            document.getElementById("cancelSearch").style.display = "none";
-          } else {
-            showError("Please select a file or folder to search");
-          }
-        } catch (error) {
-          showError("An error occurred while searching");
-          console.error("Search error:", error);
-        }
-      }
-
-      // Global state
-      let currentSearchId = null;
-      let activeEventSource = null;
-
-      function updateProgress(data) {
-        const progressBar = document.querySelector(".progress-bar");
-        const progressText = document.querySelector(".progress-text");
-        const progress = (data.processed / data.total) * 100;
-        progressBar.style.width = `${progress}%`;
-        progressText.textContent = `${Math.round(progress)}%`;
-      }
-
-      function handleEventSource(eventSource) {
-        activeEventSource = eventSource;
-        const loadingDiv = document.getElementById("loading");
-        const cancelButton = document.getElementById("cancelSearch");
-        const progressText = document.getElementById("progress");
-        const progressBar = document.querySelector(".progress-bar");
-        const progressBarText = document.querySelector(
-          ".progress-bar-container .progress-text"
-        );
-        const resultsSection = document.getElementById("resultsSection");
-
-        loadingDiv.classList.remove("hidden");
-        cancelButton.style.display = "block";
-
-        eventSource.onmessage = function (event) {
-          const data = JSON.parse(event.data);
-          console.log("Received data:", data); // Debug log
-
-          if (data.error) {
-            eventSource.close();
-            loadingDiv.classList.add("hidden");
-            showError(data.error);
-            return;
-          }
-
-          if (data.search_id) {
-            currentSearchId = data.search_id;
-            return;
-          }
-
-          if (data.type === "progress") {
-            const percentage = Math.round((data.processed / data.total) * 100);
-            // Update progress bar and its text
-            progressBar.style.width = `${percentage}%`;
-            progressBarText.textContent = `${percentage}%`;
-            // Update the file details
-            progressText.textContent = `Processing: ${data.current_file} (${data.processed}/${data.total} files, ${data.results_found} results found)`;
-          } else if (data.type === "complete") {
-            console.log("Search complete:", data); // Debug log
-            eventSource.close();
-            loadingDiv.classList.add("hidden");
-
-            // Display results if any
-            if (data.results && data.results.length > 0) {
-              displayResults(data.results);
-              resultsSection.classList.remove("hidden");
-            } else {
-              showMessage("No results found.");
-            }
-
-            // Display skipped files if any
-            if (data.skipped_files && data.skipped_files.length > 0) {
-              displaySkippedFiles(data.skipped_files);
-            }
-          } else if (data.type === "cancelled") {
-            console.log("Search cancelled"); // Debug log
-            eventSource.close();
-            loadingDiv.classList.add("hidden");
-
-            // Display partial results if any
-            if (data.results && data.results.length > 0) {
-              showMessage("Search cancelled. Showing partial results.");
-              displayResults(data.results);
-              resultsSection.classList.remove("hidden");
-
-              // Display skipped files if any
-              if (data.skipped_files && data.skipped_files.length > 0) {
-                displaySkippedFiles(data.skipped_files);
+        // Add filename mode toggle handler
+        document
+          .querySelectorAll('input[name="search_mode"]')
+          .forEach((radio) => {
+            radio.addEventListener("change", (e) => {
+              const filenameOptions =
+                document.getElementById("filenameOptions");
+              if (e.target.value === "filename") {
+                filenameOptions.classList.remove("hidden");
+              } else {
+                filenameOptions.classList.add("hidden");
               }
-            } else {
-              showMessage("Search cancelled. No results found yet.");
-            }
-            cleanupSearch();
-          }
-        };
-
-        eventSource.onerror = function (event) {
-          console.error("EventSource error:", event); // Debug log
-          eventSource.close();
-          loadingDiv.classList.add("hidden");
-          showError("Connection error occurred. Please try again.");
-          cleanupSearch();
-        };
-      }
-
-      function cleanupSearch() {
-        if (activeEventSource) {
-          console.log("Closing event source");
-          activeEventSource.close();
-          activeEventSource = null;
-        }
-
-        const loadingDiv = document.getElementById("loading");
-        const cancelButton = document.getElementById("cancelSearch");
-        const progressBar = document.querySelector(".progress-bar");
-        const progressBarText = document.querySelector(".progress-text");
-
-        loadingDiv.classList.add("hidden");
-        cancelButton.style.display = "none";
-        progressBar.style.width = "0%";
-        progressBarText.textContent = "0%";
-        currentSearchId = null;
-      }
-
-      async function cancelSearch() {
-        if (!currentSearchId) {
-          console.log("No active search to cancel");
-          return;
-        }
-
-        console.log("Attempting to cancel search:", currentSearchId);
-        document.getElementById("progress").textContent =
-          "Cancelling search...";
-
-        try {
-          const response = await fetch(`/cancel-search/${currentSearchId}`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            });
           });
 
-          const data = await response.json();
-          console.log("Cancel response:", data);
+        // Setup filtering
+        const filterInput = document.getElementById("filterInput");
+        const filterColumn = document.getElementById("filterColumn");
+        filterInput.addEventListener("input", filterResults);
+        filterColumn.addEventListener("change", filterResults);
 
-          if (!response.ok) {
-            showError(data.error || "Failed to cancel search");
-            // Clean up anyway if the search is not found
-            if (response.status === 404) {
-              cleanupSearch();
-            }
+        // Setup example queries
+        setupExampleQueries();
+
+        // Add mutual exclusivity between wildcard and regex options
+        const wildcardCheckbox = document.getElementById("useWildcard");
+        const regexCheckbox = document.getElementById("useRegex");
+
+        wildcardCheckbox.addEventListener("change", (e) => {
+          if (e.target.checked) {
+            regexCheckbox.checked = false;
+          }
+        });
+
+        regexCheckbox.addEventListener("change", (e) => {
+          if (e.target.checked) {
+            wildcardCheckbox.checked = false;
+          }
+        });
+      });
+
+      // Update the loadSkippedFiles function
+      async function loadSkippedFiles() {
+        try {
+          console.log("Fetching skip list..."); // Debug log
+          const response = await fetch("/skip-list");
+          console.log("Skip list response status:", response.status); // Debug log
+
+          const text = await response.text();
+          console.log("Raw response text:", text); // Debug log
+
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (e) {
+            console.error("Failed to parse JSON:", e);
+            return;
+          }
+
+          console.log("Parsed skip list data:", data); // Debug log
+
+          if (response.ok) {
+            // Extract the skip_list array from the response
+            const skipList = data.skip_list || [];
+            console.log("Extracted skip list:", skipList); // Debug log
+            displaySkippedFiles(skipList);
           } else {
-            // Don't clean up here - wait for the cancelled event from SSE
-            console.log("Cancel request successful");
+            console.error("Failed to load skipped files:", response.statusText);
+            displaySkippedFiles([]);
           }
         } catch (error) {
-          console.error("Error cancelling search:", error);
-          showError("Failed to cancel search");
+          console.error("Error loading skipped files:", error);
+          displaySkippedFiles([]);
         }
       }
 
       function displaySkippedFiles(skippedFiles) {
+        console.log("displaySkippedFiles called with:", skippedFiles); // Debug log
+
         const skippedFilesDiv = document.getElementById("skippedFiles");
         const skippedFilesList = document.getElementById("skippedFilesList");
+        const skipFilterInput = document.getElementById("skipFilterInput");
+        const skipFilterColumn = document.getElementById("skipFilterColumn");
 
-        // Clear existing content
+        // Clear the current list
         skippedFilesList.innerHTML = "";
 
-        if (skippedFiles && skippedFiles.length > 0) {
-          // Group skipped files by directory path
-          const groupedSkipped = {};
-          skippedFiles.forEach((file) => {
-            // Get directory path from the full path
-            const dirPath = file.path
-              ? file.path.substring(0, file.path.lastIndexOf("/"))
-              : "/";
-            const filename = file.file;
+        // Ensure we have an array to work with
+        const files = Array.isArray(skippedFiles) ? skippedFiles : [];
 
-            if (!groupedSkipped[dirPath]) {
-              groupedSkipped[dirPath] = [];
-            }
-            groupedSkipped[dirPath].push({ ...file, filename });
-          });
+        console.log("Processing files:", files); // Debug log
 
-          // Add each group to the table
-          Object.entries(groupedSkipped).forEach(
-            ([dirPath, fileErrors], groupIndex) => {
-              // Add group header
-              const headerRow = document.createElement("tr");
-              headerRow.className = "group-header";
-              headerRow.innerHTML = `
-              <td colspan="2">
-                <div class="file-group-header">
-                  <div class="path-info">
-                    <span class="directory-path" title="${dirPath}">📁 ${dirPath}</span>
-                    <span class="match-count">${fileErrors.length} file${
-                fileErrors.length > 1 ? "s" : ""
-              } skipped</span>
-                  </div>
-                </div>
-              </td>
-            `;
-              skippedFilesList.appendChild(headerRow);
-
-              // Add errors for this directory
-              fileErrors.forEach((error) => {
-                const row = document.createElement("tr");
-                row.className = "group-item";
-                const fileName =
-                  typeof error.filename === "string"
-                    ? error.filename
-                    : error.file;
-                const reason =
-                  typeof error.reason === "object"
-                    ? error.reason.reason
-                    : error.reason;
-                row.innerHTML = `
-                <td class="file-name">${escapeHtml(fileName)}</td>
-                <td class="file-reason">${escapeHtml(reason)}</td>
-              `;
-                skippedFilesList.appendChild(row);
-              });
-
-              // Add separator after each group except the last one
-              if (groupIndex < Object.keys(groupedSkipped).length - 1) {
-                const separatorRow = document.createElement("tr");
-                separatorRow.className = "group-separator";
-                separatorRow.innerHTML = '<td colspan="2"></td>';
-                skippedFilesList.appendChild(separatorRow);
-              }
-            }
-          );
-
-          // Show the skipped files section
-          skippedFilesDiv.classList.remove("hidden");
-
-          // Add event listeners for filtering
-          document
-            .getElementById("skipFilterInput")
-            .addEventListener("input", filterSkippedFiles);
-          document
-            .getElementById("skipFilterColumn")
-            .addEventListener("change", filterSkippedFiles);
-        } else {
-          // Hide the section if no skipped files
-          skippedFilesDiv.classList.add("hidden");
+        if (files.length === 0) {
+          // Show empty state message
+          const emptyRow = document.createElement("tr");
+          emptyRow.className = "no-skipped-files";
+          emptyRow.innerHTML =
+            '<td colspan="2">No skipped files to display</td>';
+          skippedFilesList.appendChild(emptyRow);
+          return;
         }
-      }
 
-      async function clearSkipList() {
-        try {
-          const response = await fetch("/skip-list", {
-            method: "DELETE",
-          });
+        // Group skipped files by directory
+        const groupedSkipped = {};
+        files.forEach((item) => {
+          if (!item || !item.directory) return; // Skip invalid entries
 
-          const data = await response.json();
-          if (response.ok) {
-            document.getElementById("skippedFiles").classList.add("hidden");
-            showMessage("Skip list cleared successfully");
-          } else {
-            showError(data.error || "Failed to clear skip list");
+          const dirPath = item.directory;
+          if (!groupedSkipped[dirPath]) {
+            groupedSkipped[dirPath] = [];
           }
-        } catch (error) {
-          showError("Failed to clear skip list");
-          console.error("Error clearing skip list:", error);
+
+          groupedSkipped[dirPath].push({
+            filename: item.file,
+            path: item.path,
+            reason:
+              item.reason && item.reason.reason
+                ? item.reason.reason
+                : "Unknown error",
+          });
+        });
+
+        console.log("Grouped by directory:", groupedSkipped); // Debug log
+
+        // Add each group to the table
+        Object.entries(groupedSkipped).forEach(
+          ([dirPath, fileErrors], groupIndex) => {
+            const headerRow = document.createElement("tr");
+            headerRow.className = "group-header";
+            headerRow.innerHTML = `
+            <td colspan="2">
+              <div class="file-group-header">
+                <div class="path-info">
+                  <span class="directory-path" title="${escapeHtml(
+                    dirPath
+                  )}">📁 ${escapeHtml(dirPath)}</span>
+                  <span class="match-count">${fileErrors.length} file${
+              fileErrors.length > 1 ? "s" : ""
+            } skipped</span>
+                </div>
+              </div>
+            </td>
+          `;
+            skippedFilesList.appendChild(headerRow);
+
+            // Add errors for this directory
+            fileErrors.forEach((error) => {
+              const row = document.createElement("tr");
+              row.className = "group-item";
+              row.innerHTML = `
+              <td class="file-name">${escapeHtml(error.filename)}</td>
+              <td class="file-reason">${escapeHtml(error.reason)}</td>
+            `;
+              skippedFilesList.appendChild(row);
+            });
+
+            // Add separator after each group except the last one
+            if (groupIndex < Object.keys(groupedSkipped).length - 1) {
+              const separatorRow = document.createElement("tr");
+              separatorRow.className = "group-separator";
+              separatorRow.innerHTML = '<td colspan="2"></td>';
+              skippedFilesList.appendChild(separatorRow);
+            }
+          }
+        );
+
+        // Set up event listeners for filtering if they don't exist
+        if (!skipFilterInput.hasEventListener) {
+          skipFilterInput.addEventListener("input", filterSkippedFiles);
+          skipFilterInput.hasEventListener = true;
+        }
+        if (!skipFilterColumn.hasEventListener) {
+          skipFilterColumn.addEventListener("change", filterSkippedFiles);
+          skipFilterColumn.hasEventListener = true;
         }
       }
 
@@ -1521,6 +1483,231 @@
       document.addEventListener("DOMContentLoaded", function () {
         setupExampleQueries();
       });
+
+      // Global state
+      let currentSearchId = null;
+      let activeEventSource = null;
+
+      function updateProgress(data) {
+        const progressBar = document.querySelector(".progress-bar");
+        const progressText = document.querySelector(".progress-text");
+        const progress = (data.processed / data.total) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressText.textContent = `${Math.round(progress)}%`;
+      }
+
+      function handleEventSource(eventSource) {
+        activeEventSource = eventSource;
+        const loadingDiv = document.getElementById("loading");
+        const cancelButton = document.getElementById("cancelSearch");
+        const progressText = document.getElementById("progress");
+        const progressBar = document.querySelector(".progress-bar");
+        const progressBarText = document.querySelector(
+          ".progress-bar-container .progress-text"
+        );
+        const resultsSection = document.getElementById("resultsSection");
+
+        loadingDiv.classList.remove("hidden");
+        cancelButton.style.display = "block";
+
+        eventSource.onmessage = function (event) {
+          const data = JSON.parse(event.data);
+          console.log("Received data:", data); // Debug log
+
+          if (data.error) {
+            eventSource.close();
+            loadingDiv.classList.add("hidden");
+            showError(data.error);
+            return;
+          }
+
+          if (data.search_id) {
+            currentSearchId = data.search_id;
+            return;
+          }
+
+          if (data.type === "progress") {
+            const percentage = Math.round((data.processed / data.total) * 100);
+            // Update progress bar and its text
+            progressBar.style.width = `${percentage}%`;
+            progressBarText.textContent = `${percentage}%`;
+            // Update the file details
+            progressText.textContent = `Processing: ${data.current_file} (${data.processed}/${data.total} files, ${data.results_found} results found)`;
+          } else if (data.type === "complete") {
+            console.log("Search complete:", data); // Debug log
+            eventSource.close();
+            loadingDiv.classList.add("hidden");
+
+            // Display results if any
+            if (data.results && data.results.length > 0) {
+              displayResults(data.results);
+              resultsSection.classList.remove("hidden");
+            } else {
+              showMessage("No results found.");
+            }
+
+            // Display skipped files if any
+            if (data.skipped_files && data.skipped_files.length > 0) {
+              displaySkippedFiles(data.skipped_files);
+            }
+          } else if (data.type === "cancelled") {
+            console.log("Search cancelled"); // Debug log
+            eventSource.close();
+            loadingDiv.classList.add("hidden");
+
+            // Display partial results if any
+            if (data.results && data.results.length > 0) {
+              showMessage("Search cancelled. Showing partial results.");
+              displayResults(data.results);
+              resultsSection.classList.remove("hidden");
+
+              // Display skipped files if any
+              if (data.skipped_files && data.skipped_files.length > 0) {
+                displaySkippedFiles(data.skipped_files);
+              }
+            } else {
+              showMessage("Search cancelled. No results found yet.");
+            }
+            cleanupSearch();
+          }
+        };
+
+        eventSource.onerror = function (event) {
+          console.error("EventSource error:", event); // Debug log
+          eventSource.close();
+          loadingDiv.classList.add("hidden");
+          showError("Connection error occurred. Please try again.");
+          cleanupSearch();
+        };
+      }
+
+      function cleanupSearch() {
+        if (activeEventSource) {
+          console.log("Closing event source");
+          activeEventSource.close();
+          activeEventSource = null;
+        }
+
+        const loadingDiv = document.getElementById("loading");
+        const cancelButton = document.getElementById("cancelSearch");
+        const progressBar = document.querySelector(".progress-bar");
+        const progressBarText = document.querySelector(".progress-text");
+
+        loadingDiv.classList.add("hidden");
+        cancelButton.style.display = "none";
+        progressBar.style.width = "0%";
+        progressBarText.textContent = "0%";
+        currentSearchId = null;
+      }
+
+      async function cancelSearch() {
+        if (!currentSearchId) {
+          console.log("No active search to cancel");
+          return;
+        }
+
+        console.log("Attempting to cancel search:", currentSearchId);
+        document.getElementById("progress").textContent =
+          "Cancelling search...";
+
+        try {
+          const response = await fetch(`/cancel-search/${currentSearchId}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          const data = await response.json();
+          console.log("Cancel response:", data);
+
+          if (!response.ok) {
+            showError(data.error || "Failed to cancel search");
+            // Clean up anyway if the search is not found
+            if (response.status === 404) {
+              cleanupSearch();
+            }
+          } else {
+            // Don't clean up here - wait for the cancelled event from SSE
+            console.log("Cancel request successful");
+          }
+        } catch (error) {
+          console.error("Error cancelling search:", error);
+          showError("Failed to cancel search");
+        }
+      }
+
+      async function handleSubmit(event) {
+        event.preventDefault();
+
+        const searchText = document.getElementById("searchText").value.trim();
+        const searchMode = document.querySelector(
+          'input[name="search_mode"]:checked'
+        ).value;
+        const fileInput = document.getElementById("fileInput");
+        const folderPath = document.getElementById("folderPath").value.trim();
+
+        if (!searchText) {
+          showError("Please enter search text");
+          return;
+        }
+
+        // Show loading state and hide results
+        const loadingDiv = document.getElementById("loading");
+        loadingDiv.classList.remove("hidden");
+        document.getElementById("resultsSection").classList.add("hidden");
+        document.getElementById("error").style.display = "none";
+
+        const formData = new FormData();
+        formData.append("search_text", searchText);
+        formData.append("search_mode", searchMode);
+
+        // Add filename search options if in filename mode
+        if (searchMode === "filename") {
+          formData.append(
+            "use_wildcard",
+            document.getElementById("useWildcard").checked
+          );
+          formData.append(
+            "use_regex",
+            document.getElementById("useRegex").checked
+          );
+          formData.append(
+            "extension_filter",
+            document.getElementById("extensionFilter").value.trim()
+          );
+          formData.append(
+            "path_filter",
+            document.getElementById("pathFilter").value.trim()
+          );
+        }
+
+        try {
+          if (folderPath) {
+            await handleFolderSearch(folderPath, searchText);
+          } else if (fileInput.files.length > 0) {
+            formData.append("file", fileInput.files[0]);
+            const response = await fetch("/search", {
+              method: "POST",
+              body: formData,
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+              displayResults(data);
+            } else {
+              showError(data.error || "An error occurred while searching");
+            }
+            // Hide cancel button for single file search
+            document.getElementById("cancelSearch").style.display = "none";
+          } else {
+            showError("Please select a file or folder to search");
+          }
+        } catch (error) {
+          showError("An error occurred while searching");
+          console.error("Search error:", error);
+        }
+      }
     </script>
   </body>
 </html>

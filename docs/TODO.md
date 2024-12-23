@@ -101,12 +101,12 @@ ExcelSeeker is a web-based application that allows users to search through Excel
 ### Search System Improvements
 
 - [ ] Column-specific search
-- [ ] Dedicated filename search mode
-  - [ ] Search in filenames only without opening files
-  - [ ] Support wildcard patterns
-  - [ ] Regex support for filename matching
-  - [ ] Path-based filtering
-  - [ ] File extension filtering
+- [✓] Dedicated filename search mode
+  - [✓] Search in filenames only without opening files
+  - [✓] Support wildcard patterns
+  - [✓] Regex support for filename matching
+  - [✓] Path-based filtering
+  - [✓] File extension filtering
 - [ ] Advanced search features
   - [ ] Search in parent folder names
   - [ ] Search by file metadata (creation date, size, author)

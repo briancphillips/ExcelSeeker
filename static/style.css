@@ -1247,3 +1247,82 @@ tr:hover {
     transform: translateY(0);
   }
 }
+
+/* Filename search mode styles */
+.filename-options {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: var(--hover-bg);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.filename-options.hidden {
+  display: none;
+}
+
+.checkbox-group {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-option input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  cursor: pointer;
+}
+
+.checkbox-option label {
+  font-size: 0.9rem;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.filter-options {
+  display: flex;
+  gap: 1rem;
+}
+
+.filter-options input {
+  flex: 1;
+  padding: 0.8rem;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  transition: border-color 0.3s ease;
+}
+
+.filter-options input:focus {
+  border-color: var(--button-bg);
+  outline: none;
+}
+
+.filter-options input::placeholder {
+  color: var(--text-muted);
+}
+
+.skipped-files {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--card-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.no-skipped-files td {
+  text-align: center;
+  padding: 2rem;
+  color: var(--subtext-color);
+  font-style: italic;
+  background: var(--background-secondary);
+}

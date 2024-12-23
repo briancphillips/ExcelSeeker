@@ -22,6 +22,8 @@ import pickle
 from datetime import datetime
 import socket
 from nlp.search_integration import SearchIntegration
+import re
+import fnmatch
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -372,12 +374,91 @@ def get_cache_key(folder_path, search_text, search_mode):
     return f"{folder_path}|{search_text}|{search_mode}|{skip_list_hash}"
 
 
+def search_filenames(
+    folder_path,
+    search_text,
+    use_wildcard=False,
+    use_regex=False,
+    extension_filter=None,
+    path_filter=None,
+):
+    """Search for files by filename only."""
+    results = []
+
+    # Process extension filter
+    allowed_extensions = None
+    if extension_filter:
+        allowed_extensions = set(
+            ext.strip().lower() for ext in extension_filter.split(",")
+        )
+
+    # Compile regex pattern if using regex
+    regex_pattern = None
+    if use_regex:
+        try:
+            regex_pattern = re.compile(search_text, re.IGNORECASE)
+        except re.error:
+            raise ValueError("Invalid regular expression pattern")
+
+    for root, _, files in os.walk(folder_path):
+        # Check path filter if specified
+        if path_filter:
+            rel_path = os.path.relpath(root, folder_path)
+            if not fnmatch.fnmatch(rel_path.lower(), path_filter.lower()):
+                continue
+
+        for filename in files:
+            # Check file extension if filter is specified
+            if allowed_extensions:
+                ext = os.path.splitext(filename)[1][1:].lower()
+                if ext not in allowed_extensions:
+                    continue
+
+            # Get relative path for display
+            rel_path = os.path.relpath(os.path.join(root, filename), folder_path)
+
+            # Perform filename matching based on search mode
+            match = False
+            if use_regex and regex_pattern:
+                match = bool(regex_pattern.search(filename))
+            elif use_wildcard:
+                match = fnmatch.fnmatch(filename.lower(), search_text.lower())
+            else:
+                match = search_text.lower() in filename.lower()
+
+            if match:
+                results.append(
+                    {
+                        "filename": filename,
+                        "filepath": str(os.path.abspath(os.path.join(root, filename))),
+                        "relative_path": rel_path,
+                        "directory": root,
+                        "sheet": "N/A",  # Add these fields to match the expected format
+                        "cell": "N/A",  # for the results table
+                        "value": filename,  # Use filename as the value
+                    }
+                )
+
+    return results
+
+
 @app.route("/search_folder")
 def search_folder():
     """Handle folder search request with natural language query support."""
+    # Capture all request parameters outside the generator
     folder_path = request.args.get("folder_path")
     search_text = request.args.get("search_text")
     search_mode = request.args.get("search_mode", "exact")
+
+    # Capture filename search parameters if needed
+    filename_params = None
+    if search_mode == "filename":
+        filename_params = {
+            "use_wildcard": request.args.get("use_wildcard") == "true",
+            "use_regex": request.args.get("use_regex") == "true",
+            "extension_filter": request.args.get("extension_filter"),
+            "path_filter": request.args.get("path_filter"),
+        }
 
     if not folder_path or not search_text:
         return jsonify({"error": "Missing folder path or search text"}), 400
@@ -390,9 +471,6 @@ def search_folder():
         all_results = []
 
         try:
-            # Clean up old cache entries
-            cleanup_old_cache_entries()
-
             # Send search ID first
             yield f"data: {json.dumps({'search_id': search_id})}\n\n"
 
@@ -400,7 +478,47 @@ def search_folder():
                 yield f"data: {json.dumps({'error': 'Folder not found'})}\n\n"
                 return
 
-            # Process natural language query
+            # Handle filename search mode
+            if search_mode == "filename":
+                try:
+                    # Perform filename search using captured parameters
+                    results = search_filenames(
+                        folder_path,
+                        search_text,
+                        filename_params["use_wildcard"],
+                        filename_params["use_regex"],
+                        filename_params["extension_filter"],
+                        filename_params["path_filter"],
+                    )
+
+                    # Send progress update
+                    progress_data = {
+                        "type": "progress",
+                        "current_file": "Searching filenames...",
+                        "processed": 1,
+                        "total": 1,
+                        "results_found": len(results),
+                    }
+                    yield f"data: {json.dumps(progress_data)}\n\n"
+
+                    # Send completion data
+                    completion_data = {
+                        "type": "complete",
+                        "results": results,
+                        "total_processed": 1,
+                        "total_skipped": 0,
+                        "skipped_files": [],
+                        "total_results": len(results),
+                        "from_cache": False,
+                    }
+                    yield f"data: {json.dumps(completion_data)}\n\n"
+                    return
+                except Exception as e:
+                    logger.error(f"Error in filename search: {str(e)}")
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                    return
+
+            # Process natural language query for non-filename searches
             search_params = search_integration.process_query(search_text)
             logger.info(f"Processed search parameters: {search_params}")
 
