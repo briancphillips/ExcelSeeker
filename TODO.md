@@ -19,6 +19,7 @@ ExcelSeeker is a web-based application that allows users to search through Excel
 ✅ Graceful error handling for corrupted files
 ✅ Partial results on search cancellation
 ✅ Robust service restart functionality
+✅ Enhanced result caching with auto-cleanup
 
 ## Technical Stack Implementation
 
@@ -109,7 +110,7 @@ excel_seeker/
    ✅ Search algorithm optimization
    ✅ Parallel file processing
    ✅ Debounced filtering
-   ✅ Result caching
+   ✅ Result caching with auto-cleanup and skip list integration
    ✅ Service health monitoring
    ✅ Search cancellation
    ✅ Progress tracking
@@ -238,12 +239,28 @@ excel_seeker/
 - [ ] Add ability to recognize year patterns (e.g., "2022-2023")
 - [ ] Support for common budget/financial patterns
 
+### Natural Language Processing
+
+- [ ] Add natural language query parsing
+- [ ] Implement semantic search capabilities
+- [ ] Extract and understand:
+  - Date ranges and relative dates (e.g., "last quarter", "next fiscal year")
+  - Currency amounts and ranges (e.g., "between $1000 and $5000")
+  - Budget codes and department references
+  - Financial terms and relationships
+- [ ] Support contextual queries (e.g., "find expenses over budget in Q4")
+- [ ] Implement query expansion for related terms
+- [ ] Add fuzzy matching for similar terms
+- [ ] Handle negation and complex conditions
+- [ ] Provide query suggestions and corrections
+
 ### Advanced Search Options
 
 - [ ] Add "Search in file names only" option
 - [ ] Add "Search in folder names" option
 - [ ] Add "Search in file contents" option
 - [ ] Allow combining search options
+- [ ] Support natural language query mode
 
 ### Results Display
 
