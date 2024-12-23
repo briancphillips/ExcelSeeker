@@ -94,10 +94,26 @@ def load_skip_list():
 def save_skip_list(skip_list):
     """Save the skip list to JSON file."""
     try:
-        # Ensure all values are strings
-        skip_list = {str(path): str(reason) for path, reason in skip_list.items()}
+        # Ensure all values are JSON serializable
+        serializable_skip_list = {}
+        for path, info in skip_list.items():
+            if isinstance(info, str):
+                # Convert old format to new format
+                info = {
+                    "reason": info,
+                    "timestamp": datetime.now().isoformat(),
+                    "file_exists": os.path.exists(path),
+                    "file_size": (
+                        os.path.getsize(path) if os.path.exists(path) else None
+                    ),
+                    "is_readable": (
+                        os.access(path, os.R_OK) if os.path.exists(path) else False
+                    ),
+                }
+            serializable_skip_list[str(path)] = info
+
         with open(SKIP_LIST_FILE, "w") as f:
-            json.dump(skip_list, f, indent=2)
+            json.dump(serializable_skip_list, f, indent=2)
     except Exception as e:
         logger.error(f"Error saving skip list: {e}")
 
@@ -107,7 +123,18 @@ def add_to_skip_list(file_path, reason="Unknown error"):
     try:
         skip_list = load_skip_list()
         abs_path = str(os.path.abspath(file_path))
-        skip_list[abs_path] = str(reason)
+        error_info = {
+            "reason": str(reason),
+            "timestamp": datetime.now().isoformat(),
+            "file_exists": os.path.exists(abs_path),
+            "file_size": (
+                os.path.getsize(abs_path) if os.path.exists(abs_path) else None
+            ),
+            "is_readable": (
+                os.access(abs_path, os.R_OK) if os.path.exists(abs_path) else False
+            ),
+        }
+        skip_list[abs_path] = error_info
         save_skip_list(skip_list)
     except Exception as e:
         logger.error(f"Error adding to skip list: {e}")
@@ -398,7 +425,17 @@ def search_folder():
                     # Check for cancellation
                     if cancel_event.is_set():
                         logger.info(f"Search {search_id} cancelled")
-                        yield f"data: {json.dumps({'type': 'cancelled'})}\n\n"
+                        # Send partial results if any were found
+                        completion_data = {
+                            "type": "cancelled",
+                            "results": all_results,
+                            "total_processed": processed,
+                            "total_skipped": len(skipped_files),
+                            "skipped_files": skipped_files,
+                            "total_results": total_results,
+                            "partial": True,
+                        }
+                        yield f"data: {json.dumps(completion_data)}\n\n"
                         return
 
                     processed += 1
@@ -443,7 +480,17 @@ def search_folder():
                         logger.info(
                             f"Search {search_id} cancelled after progress update"
                         )
-                        yield f"data: {json.dumps({'type': 'cancelled'})}\n\n"
+                        # Send partial results if any were found
+                        completion_data = {
+                            "type": "cancelled",
+                            "results": all_results,
+                            "total_processed": processed,
+                            "total_skipped": len(skipped_files),
+                            "skipped_files": skipped_files,
+                            "total_results": total_results,
+                            "partial": True,
+                        }
+                        yield f"data: {json.dumps(completion_data)}\n\n"
                         return
 
             # Store results in cache
@@ -598,9 +645,15 @@ def cleanup_services(folder_service_process):
 def manage_skip_list():
     if request.method == "GET":
         skip_list = load_skip_list()
-        # Convert to list of objects for frontend
+        # Convert to list of objects with full path information
         skip_list_array = [
-            {"file": os.path.basename(path), "path": path, "reason": reason}
+            {
+                "file": os.path.basename(path),
+                "directory": os.path.dirname(path),
+                "path": path,
+                "reason": reason,
+                "timestamp": os.path.getmtime(path) if os.path.exists(path) else None,
+            }
             for path, reason in skip_list.items()
         ]
         return jsonify({"skip_list": skip_list_array})

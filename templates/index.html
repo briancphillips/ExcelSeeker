@@ -89,7 +89,6 @@
                     id="singleFile"
                     name="searchType"
                     value="file"
-                    checked
                   />
                   <label for="singleFile">
                     <i class="icon">📄</i>
@@ -103,6 +102,7 @@
                     id="folder"
                     name="searchType"
                     value="folder"
+                    checked
                   />
                   <label for="folder">
                     <i class="icon">📁</i>
@@ -113,16 +113,10 @@
               </div>
             </div>
 
-            <div id="fileInput" class="file-input">
+            <div id="fileInput" class="file-input hidden">
               <label>Select Excel File</label>
               <div class="custom-file-input">
-                <input
-                  type="file"
-                  id="file"
-                  name="file"
-                  accept=".xls"
-                  required
-                />
+                <input type="file" id="file" name="file" accept=".xls" />
                 <label for="file" class="custom-file-label">
                   <span id="fileNameDisplay">No file chosen</span>
                   <div class="browse-btn">Browse</div>
@@ -130,7 +124,7 @@
               </div>
             </div>
 
-            <div id="folderInput" class="file-input hidden">
+            <div id="folderInput" class="file-input">
               <label for="folderPath">Select Folder</label>
               <div class="folder-input-group">
                 <input
@@ -139,6 +133,7 @@
                   name="folderPath"
                   placeholder="Choose a folder containing .xls files"
                   readonly
+                  required
                 />
                 <button
                   type="button"
@@ -251,17 +246,52 @@
         <div id="skippedFiles" class="skipped-files hidden">
           <div class="skipped-header">
             <h3>Skipped Files</h3>
-            <button
-              type="button"
-              onclick="clearSkipList()"
-              class="secondary-button"
-              title="Clear the list of skipped files"
-            >
-              Clear Skip List
-            </button>
+            <div class="skipped-controls">
+              <div class="filter-group">
+                <input
+                  type="text"
+                  id="skipFilterInput"
+                  class="filter-input"
+                  placeholder="Filter skipped files..."
+                />
+                <select id="skipFilterColumn" class="filter-select">
+                  <option value="all">All Columns</option>
+                  <option value="filename">File Name</option>
+                  <option value="reason">Error Reason</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                onclick="clearSkipList()"
+                class="secondary-button"
+                title="Clear the list of skipped files"
+              >
+                Clear Skip List
+              </button>
+              <button
+                type="button"
+                onclick="exportSkipList()"
+                class="secondary-button"
+                title="Export skipped files list as CSV"
+              >
+                Export List
+              </button>
+            </div>
           </div>
           <div class="skipped-files-content">
-            <ul id="skippedFilesList"></ul>
+            <table class="skipped-table">
+              <thead>
+                <tr>
+                  <th class="sortable" onclick="sortSkippedFiles(0)">
+                    File Name <span class="sort-icon">↕</span>
+                  </th>
+                  <th class="sortable" onclick="sortSkippedFiles(1)">
+                    Error Reason <span class="sort-icon">↕</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="skippedFilesList"></tbody>
+            </table>
           </div>
         </div>
       </main>
@@ -315,8 +345,26 @@
             folderInput.classList.remove("hidden");
             fileElement.required = false;
             folderElement.required = true;
+
+            // Restore the last folder path when switching to folder mode
+            const lastFolderPath = sessionStorage.getItem("lastFolderPath");
+            if (lastFolderPath) {
+              folderElement.value = lastFolderPath;
+            }
           }
         });
+      });
+
+      // Add this to set initial required states
+      document.addEventListener("DOMContentLoaded", () => {
+        const fileElement = document.getElementById("file");
+        const folderElement = document.getElementById("folderPath");
+        const searchType = document.querySelector(
+          'input[name="searchType"]:checked'
+        ).value;
+
+        fileElement.required = searchType === "file";
+        folderElement.required = searchType === "folder";
       });
 
       async function handleFolderSearch(folderPath, searchText) {
@@ -470,26 +518,62 @@
         // Show the results section
         resultsSection.classList.remove("hidden");
 
-        // Add each result to the table
+        // Group results by filename
+        const groupedResults = {};
         results.forEach((result) => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>
-              <a href="#" 
-                 onclick="openFile('${escapeHtml(
-                   result.filepath
-                 )}'); return false;" 
-                 class="file-link" 
-                 title="Click to open file">
-                ${escapeHtml(result.filename)}
-              </a>
+          if (!groupedResults[result.filename]) {
+            groupedResults[result.filename] = [];
+          }
+          groupedResults[result.filename].push(result);
+        });
+
+        // Add each group to the table
+        Object.entries(groupedResults).forEach(
+          ([filename, fileResults], groupIndex) => {
+            // Add group header
+            const headerRow = document.createElement("tr");
+            headerRow.className = "group-header";
+            headerRow.innerHTML = `
+            <td colspan="4">
+              <div class="file-group-header">
+                <a href="#" 
+                   onclick="openFile('${escapeHtml(
+                     fileResults[0].filepath
+                   )}'); return false;" 
+                   class="file-link" 
+                   title="Click to open file">
+                  ${escapeHtml(filename)}
+                </a>
+                <span class="match-count">${fileResults.length} match${
+              fileResults.length > 1 ? "es" : ""
+            }</span>
+              </div>
             </td>
+          `;
+            tbody.appendChild(headerRow);
+
+            // Add results for this file
+            fileResults.forEach((result) => {
+              const row = document.createElement("tr");
+              row.className = "group-item";
+              row.innerHTML = `
+              <td></td>
             <td>${escapeHtml(result.sheet)}</td>
             <td>${escapeHtml(result.cell)}</td>
             <td>${escapeHtml(result.value)}</td>
           `;
-          tbody.appendChild(row);
-        });
+              tbody.appendChild(row);
+            });
+
+            // Add separator after each group except the last one
+            if (groupIndex < Object.keys(groupedResults).length - 1) {
+              const separatorRow = document.createElement("tr");
+              separatorRow.className = "group-separator";
+              separatorRow.innerHTML = '<td colspan="4"></td>';
+              tbody.appendChild(separatorRow);
+            }
+          }
+        );
 
         // Store results for sorting/filtering
         window.searchResults = results;
@@ -537,6 +621,8 @@
           const data = await response.json();
           if (data.path) {
             document.getElementById("folderPath").value = data.path;
+            // Store the selected path in sessionStorage
+            sessionStorage.setItem("lastFolderPath", data.path);
           }
         } catch (error) {
           console.error("Error selecting folder:", error);
@@ -547,6 +633,54 @@
           errorDiv.classList.remove("hidden");
         }
       }
+
+      // Add this to restore the folder path on page load/restart
+      document.addEventListener("DOMContentLoaded", () => {
+        const lastFolderPath = sessionStorage.getItem("lastFolderPath");
+        if (lastFolderPath) {
+          document.getElementById("folderPath").value = lastFolderPath;
+        }
+
+        // Add event listener for the restart button to preserve path
+        document
+          .getElementById("restartButton")
+          .addEventListener("click", async () => {
+            try {
+              // Disable the restart button
+              const restartButton = document.getElementById("restartButton");
+              restartButton.disabled = true;
+
+              // Show a loading message
+              showMessage("Stopping services...");
+
+              // Clean up any existing search
+              if (activeEventSource) {
+                activeEventSource.close();
+                activeEventSource = null;
+              }
+
+              // Call the restart endpoint
+              const response = await fetch("/restart-services", {
+                method: "POST",
+              });
+
+              if (!response.ok) {
+                throw new Error("Failed to restart services");
+              }
+
+              showMessage("Starting services...");
+
+              // Reload the page after a delay
+              setTimeout(() => {
+                window.location.reload();
+              }, 3000);
+            } catch (error) {
+              showError("Failed to restart services: " + error.message);
+              // Re-enable the restart button on error
+              document.getElementById("restartButton").disabled = false;
+            }
+          });
+      });
 
       // Add this: Update file name display
       document.getElementById("file").addEventListener("change", function (e) {
@@ -831,7 +965,20 @@
             console.log("Search cancelled"); // Debug log
             eventSource.close();
             loadingDiv.classList.add("hidden");
-            showMessage("Search cancelled.");
+
+            // Display partial results if any
+            if (data.results && data.results.length > 0) {
+              showMessage("Search cancelled. Showing partial results.");
+              displayResults(data.results);
+              resultsSection.classList.remove("hidden");
+
+              // Display skipped files if any
+              if (data.skipped_files && data.skipped_files.length > 0) {
+                displaySkippedFiles(data.skipped_files);
+              }
+            } else {
+              showMessage("Search cancelled. No results found yet.");
+            }
             cleanupSearch();
           }
         };
@@ -909,18 +1056,79 @@
         skippedFilesList.innerHTML = "";
 
         if (skippedFiles && skippedFiles.length > 0) {
+          // Group skipped files by directory path
+          const groupedSkipped = {};
           skippedFiles.forEach((file) => {
-            const li = document.createElement("li");
-            li.className = "skipped-file-item";
-            li.innerHTML = `
-              <span class="file-name">${escapeHtml(file.file)}</span>
-              <span class="file-reason">${escapeHtml(file.reason)}</span>
-            `;
-            skippedFilesList.appendChild(li);
+            // Split the file path into directory and filename
+            const pathParts = file.file.split("/");
+            const filename = pathParts.pop();
+            const dirPath = pathParts.join("/");
+
+            if (!groupedSkipped[dirPath]) {
+              groupedSkipped[dirPath] = [];
+            }
+            groupedSkipped[dirPath].push({ ...file, filename });
           });
+
+          // Add each group to the table
+          Object.entries(groupedSkipped).forEach(
+            ([dirPath, fileErrors], groupIndex) => {
+              // Add group header
+              const headerRow = document.createElement("tr");
+              headerRow.className = "group-header";
+              headerRow.innerHTML = `
+              <td colspan="2">
+                <div class="file-group-header">
+                  <div class="path-info">
+                    <span class="directory-path">${dirPath || "/"}</span>
+                    <span class="match-count">${fileErrors.length} file${
+                fileErrors.length > 1 ? "s" : ""
+              }</span>
+                  </div>
+                </div>
+              </td>
+            `;
+              skippedFilesList.appendChild(headerRow);
+
+              // Add errors for this directory
+              fileErrors.forEach((error) => {
+                const row = document.createElement("tr");
+                row.className = "group-item";
+                const fileName =
+                  typeof error.filename === "string"
+                    ? error.filename
+                    : error.file;
+                const reason =
+                  typeof error.reason === "object"
+                    ? error.reason.reason
+                    : error.reason;
+                row.innerHTML = `
+                <td class="file-name">${escapeHtml(fileName)}</td>
+                <td class="file-reason">${escapeHtml(reason)}</td>
+              `;
+                skippedFilesList.appendChild(row);
+              });
+
+              // Add separator after each group except the last one
+              if (groupIndex < Object.keys(groupedSkipped).length - 1) {
+                const separatorRow = document.createElement("tr");
+                separatorRow.className = "group-separator";
+                separatorRow.innerHTML = '<td colspan="2"></td>';
+                skippedFilesList.appendChild(separatorRow);
+              }
+            }
+          );
 
           // Show the skipped files section
           skippedFilesDiv.classList.remove("hidden");
+
+          // Add event listeners for filtering
+          document
+            .getElementById("skipFilterInput")
+            .addEventListener("input", filterSkippedFiles);
+          document
+            .getElementById("skipFilterColumn")
+            .addEventListener("change", filterSkippedFiles);
         } else {
           // Hide the section if no skipped files
           skippedFilesDiv.classList.add("hidden");
@@ -985,6 +1193,188 @@
             document.getElementById("restartButton").disabled = false;
           }
         });
+
+      // Add to your existing JavaScript
+      let skipCurrentSort = { column: -1, direction: 1 };
+      let skipCurrentFilter = { text: "", column: "all" };
+
+      function sortSkippedFiles(columnIndex) {
+        const tbody = document.getElementById("skippedFilesList");
+        const rows = Array.from(tbody.getElementsByTagName("tr"));
+
+        // Update sort direction
+        if (skipCurrentSort.column === columnIndex) {
+          skipCurrentSort.direction *= -1;
+        } else {
+          skipCurrentSort.direction = 1;
+        }
+        skipCurrentSort.column = columnIndex;
+
+        // Update sort icons
+        document
+          .querySelectorAll(".skipped-table .sort-icon")
+          .forEach((icon) => {
+            icon.textContent = "↕";
+          });
+        const currentIcon = document.querySelectorAll(
+          ".skipped-table .sort-icon"
+        )[columnIndex];
+        currentIcon.textContent = skipCurrentSort.direction === 1 ? "↓" : "↑";
+
+        // Sort rows
+        rows.sort((a, b) => {
+          const aValue = a.cells[columnIndex].textContent.trim().toLowerCase();
+          const bValue = b.cells[columnIndex].textContent.trim().toLowerCase();
+          return aValue.localeCompare(bValue) * skipCurrentSort.direction;
+        });
+
+        // Clear and re-append sorted rows
+        tbody.innerHTML = "";
+        rows.forEach((row) => tbody.appendChild(row));
+      }
+
+      function filterSkippedFiles() {
+        const filterText = document
+          .getElementById("skipFilterInput")
+          .value.toLowerCase();
+        const filterColumn = document.getElementById("skipFilterColumn").value;
+        const tbody = document.getElementById("skippedFilesList");
+        const groups = Array.from(tbody.getElementsByClassName("group-header"));
+
+        groups.forEach((header) => {
+          let groupVisible = false;
+          let currentGroup = header;
+          const items = [];
+
+          // Collect all items in this group
+          while (
+            currentGroup.nextElementSibling &&
+            !currentGroup.nextElementSibling.classList.contains("group-header")
+          ) {
+            if (
+              currentGroup.nextElementSibling.classList.contains("group-item")
+            ) {
+              items.push(currentGroup.nextElementSibling);
+            }
+            currentGroup = currentGroup.nextElementSibling;
+          }
+
+          // Apply filter to group
+          if (filterText === "") {
+            // Show all when filter is empty
+            header.style.display = "";
+            items.forEach((item) => (item.style.display = ""));
+            if (
+              header.nextElementSibling?.classList.contains("group-separator")
+            ) {
+              header.nextElementSibling.style.display = "";
+            }
+            return;
+          }
+
+          items.forEach((item) => {
+            let text = "";
+            if (filterColumn === "all") {
+              text =
+                header.textContent.toLowerCase() +
+                " " +
+                item.textContent.toLowerCase();
+            } else if (filterColumn === "filename") {
+              text = item.querySelector(".file-name").textContent.toLowerCase();
+            } else if (filterColumn === "reason") {
+              text = item
+                .querySelector(".file-reason")
+                .textContent.toLowerCase();
+            }
+
+            const matches = text.includes(filterText);
+            item.style.display = matches ? "" : "none";
+            if (matches) groupVisible = true;
+          });
+
+          // Show/hide header and separator based on group visibility
+          header.style.display = groupVisible ? "" : "none";
+          if (
+            header.nextElementSibling?.classList.contains("group-separator")
+          ) {
+            header.nextElementSibling.style.display = groupVisible
+              ? ""
+              : "none";
+          }
+        });
+      }
+
+      // Update the export function to handle path-based grouping
+      function exportSkipList() {
+        const skippedFilesList = document.getElementById("skippedFilesList");
+        if (!skippedFilesList || !skippedFilesList.rows.length) {
+          showMessage("No skipped files to export");
+          return;
+        }
+
+        // Create CSV content
+        let csvContent = "Path,File Name,Error Reason\n";
+        let currentPath = "";
+
+        Array.from(skippedFilesList.rows).forEach((row) => {
+          if (row.classList.contains("group-header")) {
+            // Get path from the header
+            currentPath = row.querySelector(".directory-path").textContent;
+          } else if (row.classList.contains("group-item")) {
+            // Get filename and error reason from the item row
+            const fileName = row.querySelector(".file-name").textContent;
+            const reason = row.querySelector(".file-reason").textContent;
+            // Properly escape fields that might contain commas
+            const escapedPath = `"${currentPath.replace(/"/g, '""')}"`;
+            const escapedFileName = `"${fileName.replace(/"/g, '""')}"`;
+            const escapedReason = `"${reason.replace(/"/g, '""')}"`;
+            csvContent += `${escapedPath},${escapedFileName},${escapedReason}\n`;
+          }
+        });
+
+        // Create and trigger download
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "skipped_files.csv");
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        showMessage("Skipped files list exported successfully");
+      }
+
+      // Add these styles for path-based display
+      const pathStyles = document.createElement("style");
+      pathStyles.textContent = `
+        .path-info {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .directory-path {
+          color: var(--subtext-color);
+          font-size: 0.9em;
+          font-family: monospace;
+        }
+
+        .file-name {
+          font-weight: 500;
+          padding-left: 2rem;
+        }
+
+        .group-header .match-count {
+          color: var(--text-color);
+          opacity: 0.7;
+        }
+      `;
+      document.head.appendChild(pathStyles);
     </script>
   </body>
 </html>

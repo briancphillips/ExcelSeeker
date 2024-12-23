@@ -8,6 +8,7 @@ server.use(cors());
 server.use(express.json());
 
 let mainWindow = null;
+let lastSelectedPath = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -68,7 +69,7 @@ server.post("/select-folder", async (req, res) => {
     const options = {
       properties: ["openDirectory"],
       title: "Select Folder",
-      defaultPath: app.getPath("documents"),
+      defaultPath: lastSelectedPath || app.getPath("documents"),
       buttonLabel: "Select Folder",
       modal: true,
     };
@@ -76,6 +77,7 @@ server.post("/select-folder", async (req, res) => {
     const result = await dialog.showOpenDialog(mainWindow, options);
 
     if (!result.canceled) {
+      lastSelectedPath = result.filePaths[0];
       res.json({ path: result.filePaths[0] });
     } else {
       res.json({ path: null });

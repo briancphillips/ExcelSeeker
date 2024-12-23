@@ -339,7 +339,7 @@ tr:hover {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
+  padding: 0.5rem;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -944,4 +944,83 @@ tr:hover {
 
 .file-link:active {
   color: var(--accent-active-color);
+}
+
+.skipped-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.skipped-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.skipped-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.skipped-table th,
+.skipped-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.skipped-table th {
+  background-color: var(--header-bg);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.skipped-table th:hover {
+  background-color: var(--header-hover-bg);
+}
+
+.skipped-table .sort-icon {
+  margin-left: 0.5rem;
+  opacity: 0.5;
+}
+
+.skipped-table tr:hover {
+  background-color: var(--row-hover-bg);
+}
+
+.skipped-files .filter-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.skipped-files .filter-input {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+}
+
+.skipped-files .filter-select {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+}
+
+.file-name {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.file-reason {
+  color: var(--error-color);
+  font-style: italic;
 }

@@ -17,6 +17,7 @@ ExcelSeeker is a web-based application that allows users to search through Excel
 ✅ Optimized search filtering with debouncing
 ✅ Automatic service management
 ✅ Graceful error handling for corrupted files
+✅ Partial results on search cancellation
 
 ## Technical Stack Implementation
 
@@ -28,6 +29,7 @@ ExcelSeeker is a web-based application that allows users to search through Excel
 ✅ **Progress Tracking**: Server-Sent Events (SSE) for real-time updates
 ✅ **Performance**: Debounced filtering, result caching
 ✅ **Service Management**: Automatic service startup and cleanup
+✅ **Search Control**: Cancellation with partial results display
 
 ## Project Structure
 
@@ -163,6 +165,9 @@ excel_seeker/
    - [x] Progress tracking
    - [x] Skipped files display
    - [x] Detailed error tracking for skipped files
+   - [x] Partial results on cancellation
+   - [x] Progress percentage display
+   - [x] Results count in progress
 
 ## Testing Status
 
