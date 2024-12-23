@@ -18,6 +18,9 @@
   --success-text: #fff;
   --accent-hover-color: #0056b3;
   --accent-active-color: #004085;
+  --link-color: #4a90e2;
+  --link-hover-color: #357abd;
+  --background-secondary: #f0f0f0;
 }
 
 :root[data-theme="dark"] {
@@ -39,6 +42,9 @@
   --success-text: #fff;
   --accent-hover-color: #63b3ed;
   --accent-active-color: #4299e1;
+  --link-color: #63b3ed;
+  --link-hover-color: #4299e1;
+  --background-secondary: #363636;
 }
 
 /* Reset and base styles */
@@ -264,16 +270,13 @@ tr:hover {
 /* Progress bar styles */
 .progress-bar-container {
   width: 100%;
-  max-width: 400px;
-  height: 32px;
+  max-width: 600px;
+  height: 40px !important;
   background-color: var(--border-color);
-  border-radius: 16px;
+  border-radius: 20px;
   overflow: hidden;
   margin: 1rem auto;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .progress-bar {
@@ -287,16 +290,22 @@ tr:hover {
   z-index: 1;
 }
 
-.progress-text {
-  position: relative;
+.progress-bar-container .progress-text {
+  position: absolute;
   z-index: 2;
   color: white;
-  font-size: 0.9rem;
+  font-size: 1.2rem;
   font-weight: 600;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   margin: 0;
   padding: 0;
-  line-height: 32px;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 /* Loading section */
@@ -317,11 +326,15 @@ tr:hover {
   margin: 0.5rem 0;
   color: var(--text-color);
   font-size: 1.2rem;
+  width: 100%;
+  text-align: center;
 }
 
-.loading p:nth-child(3) {
+#progress {
   font-size: 0.9rem;
   color: var(--subtext-color);
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 /* Skipped files section */
@@ -1093,4 +1106,144 @@ tr:hover {
   font-size: 0.8em;
   color: var(--subtext-color);
   margin-top: 0.25rem;
+}
+
+/* Natural language query styles */
+.search-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.search-container input[type="text"] {
+  padding: 1rem;
+  font-size: 1.1rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  transition: all 0.3s ease;
+}
+
+.search-container input[type="text"]:focus {
+  border-color: var(--button-bg);
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+  outline: none;
+}
+
+.help-text {
+  color: var(--subtext-color);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0.5rem 0 1rem;
+  padding: 1rem;
+  background-color: var(--background-secondary);
+  border-radius: 6px;
+}
+
+.help-text code {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.query-example {
+  cursor: pointer;
+  color: var(--link-color);
+  text-decoration: underline;
+  display: inline-block;
+  margin-right: 1rem;
+  transition: color 0.2s ease;
+}
+
+.query-example:hover {
+  color: var(--link-hover-color);
+}
+
+/* Result type indicators */
+.result-type-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+  background-color: var(--background-secondary);
+  margin-right: 0.5rem;
+}
+
+.result-type-indicator.date {
+  color: #43a047;
+}
+
+.result-type-indicator.monetary {
+  color: #f57c00;
+}
+
+.result-type-indicator.budget {
+  color: #7b1fa2;
+}
+
+/* Enhanced table styles for result types */
+.table-container td {
+  position: relative;
+}
+
+.table-container td[data-type]::before {
+  content: attr(data-emoji);
+  margin-right: 0.5rem;
+  font-size: 1.1em;
+}
+
+/* Progress bar enhancements */
+.progress-bar-container {
+  width: 100%;
+  max-width: 400px;
+  height: 8px;
+  background-color: var(--background-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 1rem 0;
+  position: relative;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: var(--button-bg);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.progress-text {
+  position: absolute;
+  right: -2.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.9rem;
+  color: var(--text-color);
+}
+
+/* Message styles */
+.message {
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 6px;
+  background-color: var(--background-secondary);
+  color: var(--text-color);
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

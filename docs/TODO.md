@@ -15,10 +15,10 @@
 - Added cancel search functionality
 - Added real-time filtering for results and skipped files
 - Added sorting capabilities for both results and skipped files
+- Fixed progress bar styling and text alignment
 
 ## In Progress 🚧
 
-- Fix progress percentage not updating correctly
 - Fix filtering events when deleting text
 
 ## Planned Features 📋
