@@ -1406,3 +1406,80 @@ tr:hover {
 .radio-option.disabled .check-icon {
   display: none;
 }
+
+.search-modes-container.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  filter: grayscale(100%);
+}
+
+.radio-option.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.radio-option.disabled label,
+.radio-option.disabled .icon {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.radio-option.disabled input[type="radio"] {
+  cursor: not-allowed;
+}
+
+/* Add a visual indicator that the section is disabled */
+.search-modes-container.disabled::before {
+  content: "Search modes not available with NLP search";
+  display: block;
+  text-align: center;
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 10px;
+  font-style: italic;
+}
+
+/* Search mode disabled states */
+.search-modes-container.disabled {
+  position: relative;
+  opacity: 0.6;
+  pointer-events: none;
+  filter: grayscale(100%);
+}
+
+.search-modes-container.disabled::after {
+  content: "Search modes not available with NLP search";
+  position: absolute;
+  top: -20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.9em;
+  color: #666;
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.radio-option.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+  position: relative;
+}
+
+.radio-option.disabled label,
+.radio-option.disabled .icon {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.radio-option.disabled input[type="radio"] {
+  cursor: not-allowed;
+}
+
+.radio-option.disabled .check-icon {
+  display: none;
+}

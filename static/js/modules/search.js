@@ -31,12 +31,13 @@ export class SearchManager {
       resultsSection: getElement("resultsSection"),
       progressBar: getElement("progress"),
       cancelButton: getElement("cancelSearch"),
-      searchTypeInputs: document.querySelectorAll('input[name="searchType"]'),
+      searchTypeInputs: document.querySelectorAll('input[name="search_type"]'),
       searchModeInputs: document.querySelectorAll('input[name="search_mode"]'),
       regularModes: getElement("regularSearchModes"),
       nlpInfo: getElement("nlpSearchInfo"),
       progressText: document.querySelector(".progress-text"),
       progressBarElement: document.querySelector(".progress-bar"),
+      searchModeContainer: getElement("regularSearchModes"),
     };
   }
 
@@ -53,26 +54,19 @@ export class SearchManager {
       this.handleCancel.bind(this)
     );
 
-    // Search type changes
-    this.setupSearchTypeListeners();
-
-    // Initialize search type state
-    const currentSearchType =
-      document.querySelector('input[name="search_type"]:checked')?.value ||
-      "regular";
-    this.updateSearchTypeState(currentSearchType === "regular");
-  }
-
-  /**
-   * Setup search type toggle listeners
-   */
-  setupSearchTypeListeners() {
+    // Search type changes (regular vs NLP)
     this.elements.searchTypeInputs.forEach((radio) => {
       radio.addEventListener("change", (e) => {
         const isRegular = e.target.value === "regular";
         this.updateSearchTypeState(isRegular);
       });
     });
+
+    // Initialize search type state
+    const currentSearchType =
+      document.querySelector('input[name="search_type"]:checked')?.value ||
+      "regular";
+    this.updateSearchTypeState(currentSearchType === "regular");
   }
 
   /**
@@ -88,16 +82,23 @@ export class SearchManager {
       ? "Enter search text"
       : "Enter natural language query (e.g., 'find travel expenses over $5000 from last quarter')";
 
-    // Enable/disable search mode inputs
+    // Enable/disable search mode container and inputs
+    this.elements.searchModeContainer.classList.toggle("disabled", !isRegular);
+
     this.elements.searchModeInputs.forEach((input) => {
       input.disabled = !isRegular;
       const radioOption = input.closest(".radio-option");
       if (radioOption) {
         radioOption.classList.toggle("disabled", !isRegular);
+        // Also disable the label and icon to show it's not interactive
+        const label = radioOption.querySelector("label");
+        const icon = radioOption.querySelector(".icon");
+        if (label) label.classList.toggle("disabled", !isRegular);
+        if (icon) icon.classList.toggle("disabled", !isRegular);
       }
     });
 
-    // If switching to NLP, select the first mode
+    // If switching to NLP, select the first mode but keep it disabled
     if (!isRegular && this.elements.searchModeInputs.length > 0) {
       this.elements.searchModeInputs[0].checked = true;
     }
