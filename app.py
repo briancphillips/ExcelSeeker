@@ -1039,6 +1039,54 @@ def restart_services():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/select-folder", methods=["POST"])
+def select_folder():
+    """Handle folder selection request."""
+    try:
+        if platform.system() == "Darwin":  # macOS
+            cmd = [
+                "osascript",
+                "-e",
+                'POSIX path of (choose folder with prompt "Select a folder containing Excel files")',
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                folder_path = result.stdout.strip()
+                return jsonify({"path": folder_path})
+            else:
+                return jsonify({"error": "Folder selection cancelled"}), 400
+        elif platform.system() == "Windows":
+            import tkinter as tk
+            from tkinter import filedialog
+
+            root = tk.Tk()
+            root.withdraw()  # Hide the main window
+            folder_path = filedialog.askdirectory(
+                title="Select a folder containing Excel files"
+            )
+            root.destroy()
+            return jsonify({"path": folder_path})
+        else:  # Linux
+            cmd = [
+                "zenity",
+                "--file-selection",
+                "--directory",
+                "--title=Select a folder containing Excel files",
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                folder_path = result.stdout.strip()
+                return jsonify({"path": folder_path})
+            else:
+                return jsonify({"error": "Folder selection cancelled"}), 400
+
+    except Exception as e:
+        logger.error(f"Error selecting folder: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({"error": "Failed to select folder"}), 500
+
+
 if __name__ == "__main__":
     try:
         # Ensure the application can find its templates and static files

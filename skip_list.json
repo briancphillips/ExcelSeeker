@@ -14327,5 +14327,572 @@
     "file_exists": true,
     "file_size": 988672,
     "is_readable": true
+  },
+  "/Volumes/New folder/Repaired_100_NCAA STUD ATHLETE OPPORTUNITY FUND-7.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_100_NCAA STUD ATHLETE OPPORTUNITY FUND-7.xls'",
+    "timestamp": "2024-12-23T13:48:11.528938",
+    "file_exists": true,
+    "file_size": 491520,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_101_NCAA RETENTION MGMT DESIGNATED-Inactive-24.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_101_NCAA RETENTION MGMT DESIGNATED-Inactive-24.xls'",
+    "timestamp": "2024-12-23T13:48:11.552778",
+    "file_exists": true,
+    "file_size": 138752,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_102_NCAA STUD ATHLETE OPPORTUNITY FUND-63.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_102_NCAA STUD ATHLETE OPPORTUNITY FUND-63.xls'",
+    "timestamp": "2024-12-23T13:48:11.574765",
+    "file_exists": true,
+    "file_size": 325120,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_103_ATHLETIC ADMINISTRATION-49.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_103_ATHLETIC ADMINISTRATION-49.xls'",
+    "timestamp": "2024-12-23T13:48:11.597329",
+    "file_exists": true,
+    "file_size": 2374144,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_104_ATHLETICS HALF GRAND CLUB DES-65.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_104_ATHLETICS HALF GRAND CLUB DES-65.xls'",
+    "timestamp": "2024-12-23T13:48:11.619629",
+    "file_exists": true,
+    "file_size": 448000,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_105_STUDENT-ATHLETE ACADEMIC SERVICES-4.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_105_STUDENT-ATHLETE ACADEMIC SERVICES-4.xls'",
+    "timestamp": "2024-12-23T13:48:11.642170",
+    "file_exists": true,
+    "file_size": 155648,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_106_Student Athlete Advisory Committee (SAAC)-31.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_106_Student Athlete Advisory Committee (SAAC)-31.xls'",
+    "timestamp": "2024-12-23T13:48:11.665236",
+    "file_exists": true,
+    "file_size": 97792,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_107_NCAA RETENTION MGMT DESIGNATED-Inactive-14.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_107_NCAA RETENTION MGMT DESIGNATED-Inactive-14.xls'",
+    "timestamp": "2024-12-23T13:48:11.687123",
+    "file_exists": true,
+    "file_size": 138752,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_108_NCAA STUD ATHLETE OPPORTUNITY FUND-53.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_108_NCAA STUD ATHLETE OPPORTUNITY FUND-53.xls'",
+    "timestamp": "2024-12-23T13:48:11.709428",
+    "file_exists": true,
+    "file_size": 501248,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_10_Baseball Designated-66.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_10_Baseball Designated-66.xls'",
+    "timestamp": "2024-12-23T13:48:11.769406",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_111_ATHLETIC FOUNDATION ACCOUNT-5.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_111_ATHLETIC FOUNDATION ACCOUNT-5.xls'",
+    "timestamp": "2024-12-23T13:48:11.791677",
+    "file_exists": true,
+    "file_size": 82944,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_113_ATHLETIC FOUNDATION ACCOUNT-39.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_113_ATHLETIC FOUNDATION ACCOUNT-39.xls'",
+    "timestamp": "2024-12-23T13:48:11.814164",
+    "file_exists": true,
+    "file_size": 82944,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_114_NCAA STUD ATHLETE OPPORTUNITY FUND-43.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_114_NCAA STUD ATHLETE OPPORTUNITY FUND-43.xls'",
+    "timestamp": "2024-12-23T13:48:11.837587",
+    "file_exists": true,
+    "file_size": 323584,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_11_Baseball Dugout Club Designated-29.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_11_Baseball Dugout Club Designated-29.xls'",
+    "timestamp": "2024-12-23T13:48:11.860068",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_12_Baseball Dugout Club Designated-36.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_12_Baseball Dugout Club Designated-36.xls'",
+    "timestamp": "2024-12-23T13:48:11.906921",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_13_Baseball Dugout Club Designated-43.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_13_Baseball Dugout Club Designated-43.xls'",
+    "timestamp": "2024-12-23T13:48:11.955223",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_14_Baseball Designated-41.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_14_Baseball Designated-41.xls'",
+    "timestamp": "2024-12-23T13:48:11.977481",
+    "file_exists": true,
+    "file_size": 216064,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_18_Baseball Dugout Club Designated-8.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_18_Baseball Dugout Club Designated-8.xls'",
+    "timestamp": "2024-12-23T13:48:12.047470",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_19_Baseball Designated-13.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_19_Baseball Designated-13.xls'",
+    "timestamp": "2024-12-23T13:48:12.171406",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_22_BASEBALL-7.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_22_BASEBALL-7.xls'",
+    "timestamp": "2024-12-23T13:48:12.287098",
+    "file_exists": true,
+    "file_size": 1032704,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_23_Baseball Designated-49.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_23_Baseball Designated-49.xls'",
+    "timestamp": "2024-12-23T13:48:12.310901",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_24_Baseball Designated-56.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_24_Baseball Designated-56.xls'",
+    "timestamp": "2024-12-23T13:48:12.334781",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_26_Baseball Dugout Club Designated-26.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_26_Baseball Dugout Club Designated-26.xls'",
+    "timestamp": "2024-12-23T13:48:12.442443",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_27_Baseball Dugout Club Designated-33.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_27_Baseball Dugout Club Designated-33.xls'",
+    "timestamp": "2024-12-23T13:48:12.485188",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_28_Baseball Dugout Club Designated-40.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_28_Baseball Dugout Club Designated-40.xls'",
+    "timestamp": "2024-12-23T13:48:12.533793",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_2_Baseball Dugout Club Designated-21.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_2_Baseball Dugout Club Designated-21.xls'",
+    "timestamp": "2024-12-23T13:48:12.579848",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_30_Baseball Designated-28.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_30_Baseball Designated-28.xls'",
+    "timestamp": "2024-12-23T13:48:12.603036",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_31_Baseball Designated-35.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_31_Baseball Designated-35.xls'",
+    "timestamp": "2024-12-23T13:48:12.647258",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_32_BASEBALL-12.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_32_BASEBALL-12.xls'",
+    "timestamp": "2024-12-23T13:48:12.693833",
+    "file_exists": true,
+    "file_size": 1009664,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_33_Baseball Dugout Club Designated-5.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_33_Baseball Dugout Club Designated-5.xls'",
+    "timestamp": "2024-12-23T13:48:12.716304",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_34_Baseball Designated-10.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_34_Baseball Designated-10.xls'",
+    "timestamp": "2024-12-23T13:48:12.738878",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_35_Baseball Dugout Club Designated-12.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_35_Baseball Dugout Club Designated-12.xls'",
+    "timestamp": "2024-12-23T13:48:12.761894",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_37_Baseball Designated-46.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_37_Baseball Designated-46.xls'",
+    "timestamp": "2024-12-23T13:48:12.784865",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_38_Baseball Designated-53.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_38_Baseball Designated-53.xls'",
+    "timestamp": "2024-12-23T13:48:12.807054",
+    "file_exists": true,
+    "file_size": 216064,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_39_Baseball Designated-60.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_39_Baseball Designated-60.xls'",
+    "timestamp": "2024-12-23T13:48:12.830072",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_3_Baseball Designated-16.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_3_Baseball Designated-16.xls'",
+    "timestamp": "2024-12-23T13:48:12.877507",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_40_Baseball Dugout Club Designated-48.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_40_Baseball Dugout Club Designated-48.xls'",
+    "timestamp": "2024-12-23T13:48:12.958151",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_42_Baseball Dugout Club Designated-30.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_42_Baseball Dugout Club Designated-30.xls'",
+    "timestamp": "2024-12-23T13:48:13.024413",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_43_Baseball Designated-18.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_43_Baseball Designated-18.xls'",
+    "timestamp": "2024-12-23T13:48:13.047098",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_45_Baseball Designated-32.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_45_Baseball Designated-32.xls'",
+    "timestamp": "2024-12-23T13:48:13.070703",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_46_Baseball Designated-3.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_46_Baseball Designated-3.xls'",
+    "timestamp": "2024-12-23T13:48:13.190844",
+    "file_exists": true,
+    "file_size": 216064,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_47_Baseball Dugout Club Designated-2.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_47_Baseball Dugout Club Designated-2.xls'",
+    "timestamp": "2024-12-23T13:48:13.238380",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_4_Baseball Designated.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_4_Baseball Designated.xls'",
+    "timestamp": "2024-12-23T13:48:13.306132",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_50_Baseball Designated-43.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_50_Baseball Designated-43.xls'",
+    "timestamp": "2024-12-23T13:48:13.328710",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_51_Baseball Designated-50.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_51_Baseball Designated-50.xls'",
+    "timestamp": "2024-12-23T13:48:13.350790",
+    "file_exists": true,
+    "file_size": 216064,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_52_Baseball Dugout Club Designated-38.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_52_Baseball Dugout Club Designated-38.xls'",
+    "timestamp": "2024-12-23T13:48:13.395184",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_53_Baseball Dugout Club Designated-45.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_53_Baseball Dugout Club Designated-45.xls'",
+    "timestamp": "2024-12-23T13:48:13.443648",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_55_Baseball Dugout Club Designated-20.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_55_Baseball Dugout Club Designated-20.xls'",
+    "timestamp": "2024-12-23T13:48:13.529597",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_59_BASEBALL-9.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_59_BASEBALL-9.xls'",
+    "timestamp": "2024-12-23T13:48:13.602981",
+    "file_exists": true,
+    "file_size": 1032704,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_60_Baseball Designated-58.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_60_Baseball Designated-58.xls'",
+    "timestamp": "2024-12-23T13:48:13.627042",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_61_Baseball Designated-65.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_61_Baseball Designated-65.xls'",
+    "timestamp": "2024-12-23T13:48:13.674774",
+    "file_exists": true,
+    "file_size": 216064,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_62_Baseball Dugout Club Designated-28.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_62_Baseball Dugout Club Designated-28.xls'",
+    "timestamp": "2024-12-23T13:48:13.748773",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_63_Baseball Designated-40.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_63_Baseball Designated-40.xls'",
+    "timestamp": "2024-12-23T13:48:13.772020",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_64_Baseball Dugout Club Designated-42.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_64_Baseball Dugout Club Designated-42.xls'",
+    "timestamp": "2024-12-23T13:48:13.815306",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_65_Baseball Dugout Club Designated-35.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_65_Baseball Dugout Club Designated-35.xls'",
+    "timestamp": "2024-12-23T13:48:13.862529",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_67_Baseball Designated-8.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_67_Baseball Designated-8.xls'",
+    "timestamp": "2024-12-23T13:48:13.909689",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_68_Baseball Dugout Club Designated-7.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_68_Baseball Dugout Club Designated-7.xls'",
+    "timestamp": "2024-12-23T13:48:13.957354",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_6_Baseball Designated-30.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_6_Baseball Designated-30.xls'",
+    "timestamp": "2024-12-23T13:48:14.073754",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_70_Baseball Designated-12.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_70_Baseball Designated-12.xls'",
+    "timestamp": "2024-12-23T13:48:14.122376",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_71_NCAA ACADEMIC ENHANCEMENT-NCAA FUND 25-64.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_71_NCAA ACADEMIC ENHANCEMENT-NCAA FUND 25-64.xls'",
+    "timestamp": "2024-12-23T13:48:14.145452",
+    "file_exists": true,
+    "file_size": 368128,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_72_ATHLETIC ADMINISTRATION-24.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_72_ATHLETIC ADMINISTRATION-24.xls'",
+    "timestamp": "2024-12-23T13:48:14.168819",
+    "file_exists": true,
+    "file_size": 2306560,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_73_NCAA STUD ATHLETE OPPORTUNITY FUND-39.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_73_NCAA STUD ATHLETE OPPORTUNITY FUND-39.xls'",
+    "timestamp": "2024-12-23T13:48:14.192042",
+    "file_exists": true,
+    "file_size": 497152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_74_ATHLETIC FOUNDATION ACCOUNT-24.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_74_ATHLETIC FOUNDATION ACCOUNT-24.xls'",
+    "timestamp": "2024-12-23T13:48:14.214796",
+    "file_exists": true,
+    "file_size": 82944,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_75_NCAA NEEDY FUND-8.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_75_NCAA NEEDY FUND-8.xls'",
+    "timestamp": "2024-12-23T13:48:14.238774",
+    "file_exists": true,
+    "file_size": 274944,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_76_Student Athlete Advisory Committee (SAAC)-22.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_76_Student Athlete Advisory Committee (SAAC)-22.xls'",
+    "timestamp": "2024-12-23T13:48:14.261790",
+    "file_exists": true,
+    "file_size": 97792,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_80_10 BUCKS A MONTH-4.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_80_10 BUCKS A MONTH-4.xls'",
+    "timestamp": "2024-12-23T13:48:14.348486",
+    "file_exists": true,
+    "file_size": 177664,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_81_NCAA STUD ATHLETE OPPORTUNITY FUND-29.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_81_NCAA STUD ATHLETE OPPORTUNITY FUND-29.xls'",
+    "timestamp": "2024-12-23T13:48:14.372815",
+    "file_exists": true,
+    "file_size": 503808,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_82_ATHLETIC FOUNDATION ACCOUNT-14.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_82_ATHLETIC FOUNDATION ACCOUNT-14.xls'",
+    "timestamp": "2024-12-23T13:48:14.396694",
+    "file_exists": true,
+    "file_size": 82944,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_83_Student Athlete Advisory Committee (SAAC)-12.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_83_Student Athlete Advisory Committee (SAAC)-12.xls'",
+    "timestamp": "2024-12-23T13:48:14.419469",
+    "file_exists": true,
+    "file_size": 97792,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_87_NCAA ACADEMIC ENHANCEMENT-NCAA FUND 25.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_87_NCAA ACADEMIC ENHANCEMENT-NCAA FUND 25.xls'",
+    "timestamp": "2024-12-23T13:48:14.477037",
+    "file_exists": true,
+    "file_size": 323584,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_89_NCAA RETENTION MGMT DESIGNATED-Inactive-44.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_89_NCAA RETENTION MGMT DESIGNATED-Inactive-44.xls'",
+    "timestamp": "2024-12-23T13:48:14.501405",
+    "file_exists": true,
+    "file_size": 138752,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_8_Baseball Dugout Club Designated-18.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_8_Baseball Dugout Club Designated-18.xls'",
+    "timestamp": "2024-12-23T13:48:14.545904",
+    "file_exists": true,
+    "file_size": 241152,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_91_UNITED AS ONE CAMPAIGN-17.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_91_UNITED AS ONE CAMPAIGN-17.xls'",
+    "timestamp": "2024-12-23T13:48:14.608056",
+    "file_exists": true,
+    "file_size": 99328,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_92_Student Athlete Advisory Committee (SAAC)-3.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_92_Student Athlete Advisory Committee (SAAC)-3.xls'",
+    "timestamp": "2024-12-23T13:48:14.632955",
+    "file_exists": true,
+    "file_size": 97792,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_93_NCAA STUD ATHLETE OPPORTUNITY FUND-14.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_93_NCAA STUD ATHLETE OPPORTUNITY FUND-14.xls'",
+    "timestamp": "2024-12-23T13:48:14.658922",
+    "file_exists": true,
+    "file_size": 491520,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_94_ATHLETIC FOUNDATION ACCOUNT-53.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_94_ATHLETIC FOUNDATION ACCOUNT-53.xls'",
+    "timestamp": "2024-12-23T13:48:14.684351",
+    "file_exists": true,
+    "file_size": 82944,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_95_NCAA RETENTION MGMT DESIGNATED-Inactive-34.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_95_NCAA RETENTION MGMT DESIGNATED-Inactive-34.xls'",
+    "timestamp": "2024-12-23T13:48:14.708780",
+    "file_exists": true,
+    "file_size": 138752,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_97_NCAA STUD ATHLETE OPPORTUNITY FUND-73.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_97_NCAA STUD ATHLETE OPPORTUNITY FUND-73.xls'",
+    "timestamp": "2024-12-23T13:48:14.773780",
+    "file_exists": true,
+    "file_size": 499200,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_99_ATHLETIC FOUNDATION ACCOUNT-43.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_99_ATHLETIC FOUNDATION ACCOUNT-43.xls'",
+    "timestamp": "2024-12-23T13:48:14.920937",
+    "file_exists": true,
+    "file_size": 82944,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_9_Baseball Designated-59.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_9_Baseball Designated-59.xls'",
+    "timestamp": "2024-12-23T13:48:14.965024",
+    "file_exists": true,
+    "file_size": 228352,
+    "is_readable": false
+  },
+  "/Volumes/New folder/Repaired_117_ATHLETIC ADMINISTRATION-29.xls": {
+    "reason": "[Errno 13] Permission denied: '/Volumes/New folder/Repaired_117_ATHLETIC ADMINISTRATION-29.xls'",
+    "timestamp": "2024-12-23T13:48:49.508838",
+    "file_exists": true,
+    "file_size": 2306560,
+    "is_readable": false
   }
 }

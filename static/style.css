@@ -1326,3 +1326,83 @@ tr:hover {
   font-style: italic;
   background: var(--background-secondary);
 }
+
+/* Search Mode Styles */
+.search-type-selector {
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 1.5rem;
+}
+
+.search-type-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.search-modes-container {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: var(--secondary-bg);
+}
+
+.radio-group.horizontal {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+}
+
+.radio-group.horizontal .radio-option {
+  flex: 1;
+  max-width: 200px;
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: var(--primary-bg);
+  transition: background-color 0.2s;
+}
+
+.radio-group.horizontal .radio-option:hover {
+  background: var(--hover-bg);
+}
+
+.nlp-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: var(--secondary-bg);
+}
+
+.nlp-capabilities {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.hidden {
+  display: none;
+}
+
+.radio-option.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  background-color: var(--background-secondary);
+}
+
+.radio-option.disabled label {
+  cursor: not-allowed;
+}
+
+.radio-option.disabled input[type="radio"] {
+  cursor: not-allowed;
+}
+
+.radio-option.disabled .icon {
+  opacity: 0.5;
+}
+
+.radio-option.disabled .check-icon {
+  display: none;
+}
