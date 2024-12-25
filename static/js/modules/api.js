@@ -134,8 +134,8 @@ export class APIService {
    * Clear skip list
    */
   async clearSkipList() {
-    const response = await fetch("/clear-skip-list", {
-      method: "POST",
+    const response = await fetch("/skip-list", {
+      method: "DELETE",
     });
 
     if (!response.ok) {

@@ -46,3 +46,6 @@ temp/
 *.csv
 skip_list.json
 search_cache.pkl
+skip_list.json
+skip_list.json
+skip_list.json.bak
